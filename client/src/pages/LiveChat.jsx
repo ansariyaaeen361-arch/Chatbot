@@ -2,8 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
+import Sidebar from '../components/Sidebar';
+import { color, globalStyles } from '../theme';
 
-const API_ROOT = 'http://localhost:5000';
+const API_ROOT = (api.defaults.baseURL || '').replace(/\/api\/?$/, '');
 
 export default function LiveChat() {
   const { user, businessId } = useAuth();
@@ -116,22 +118,25 @@ export default function LiveChat() {
   const list = tab === 'waiting' ? waiting : tab === 'active' ? active : closed;
 
   return (
-    <div style={styles.wrap}>
-      <div style={styles.sidebar}>
-        <div style={styles.tabs}>
-          <button style={tab === 'waiting' ? styles.tabActive : styles.tab} onClick={() => setTab('waiting')}>Waiting ({waiting.length})</button>
-          <button style={tab === 'active' ? styles.tabActive : styles.tab} onClick={() => setTab('active')}>Active ({active.length})</button>
-          <button style={tab === 'closed' ? styles.tabActive : styles.tab} onClick={() => setTab('closed')}>Closed ({closed.length})</button>
+    <div style={s.wrap} className="forge-shell">
+      <style>{globalStyles}</style>
+      <Sidebar />
+
+      <div style={s.listPanel}>
+        <div style={s.tabs}>
+          <button style={tab === 'waiting' ? s.tabActive : s.tab} onClick={() => setTab('waiting')}>Waiting ({waiting.length})</button>
+          <button style={tab === 'active' ? s.tabActive : s.tab} onClick={() => setTab('active')}>Active ({active.length})</button>
+          <button style={tab === 'closed' ? s.tabActive : s.tab} onClick={() => setTab('closed')}>Closed ({closed.length})</button>
         </div>
-        <div style={styles.list}>
-          {list.length === 0 && <div style={styles.empty}>Nothing here.</div>}
+        <div style={s.list}>
+          {list.length === 0 && <div style={s.empty}>Nothing here.</div>}
           {list.map(chat => (
-            <div key={chat._id} style={styles.item} onClick={() => openChat(chat)}>
-              <div style={styles.itemName}>{chat.visitorName}</div>
-              <div style={styles.itemContact}>{chat.visitorEmail || chat.visitorPhone || 'no contact'}</div>
-              {isAdmin && chat.assignedToName && <div style={styles.itemAgent}>Agent: {chat.assignedToName}</div>}
+            <div key={chat._id} style={selectedChat?._id === chat._id ? { ...s.item, ...s.itemActive } : s.item} onClick={() => openChat(chat)}>
+              <div style={s.itemName}>{chat.visitorName}</div>
+              <div style={s.itemContact}>{chat.visitorEmail || chat.visitorPhone || 'no contact'}</div>
+              {isAdmin && chat.assignedToName && <div style={s.itemAgent}>Agent: {chat.assignedToName}</div>}
               {tab === 'waiting' && (
-                <button style={styles.acceptBtn} onClick={(e) => { e.stopPropagation(); acceptChat(chat._id); }}>
+                <button style={s.acceptBtn} onClick={(e) => { e.stopPropagation(); acceptChat(chat._id); }}>
                   Accept chat
                 </button>
               )}
@@ -140,48 +145,47 @@ export default function LiveChat() {
         </div>
       </div>
 
-      <div style={styles.chatPanel}>
-        {!selectedChat && <div style={styles.noChat}>Select a chat to view</div>}
+      <div style={s.chatPanel}>
+        {!selectedChat && <div style={s.noChat}>Select a chat to view</div>}
         {selectedChat && (
           <>
-            <div style={styles.chatHead}>
+            <div style={s.chatHead}>
               <div>
-                <div style={{ fontWeight: 600 }}>{selectedChat.visitorName}</div>
-                <div style={{ fontSize: 12, color: '#666' }}>{selectedChat.visitorEmail || selectedChat.visitorPhone}</div>
+                <div style={s.chatHeadName}>{selectedChat.visitorName}</div>
+                <div style={s.chatHeadContact}>{selectedChat.visitorEmail || selectedChat.visitorPhone}</div>
               </div>
               {selectedChat.status === 'active' && (
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <select onChange={(e) => {
+                  <select className="forge-input" style={s.transferSelect} onChange={(e) => {
                     const [id, name] = e.target.value.split('|');
                     if (id) transferChat(id, name);
                   }} defaultValue="">
-                    <option value="">Transfer to...</option>
+                    <option value="">Transfer to…</option>
                     {team.filter(t => t._id !== user.id).map(t => (
                       <option key={t._id} value={`${t._id}|${t.name}`}>{t.name}</option>
                     ))}
                   </select>
-                  <button onClick={closeChat} style={styles.closeBtn}>Close chat</button>
+                  <button className="forge-ghost" onClick={closeChat} style={s.closeBtn}>Close chat</button>
                 </div>
               )}
             </div>
-            <div style={styles.chatBody} ref={bodyRef}>
+            <div style={s.chatBody} ref={bodyRef}>
               {messages.map((m, i) => (
-                <div key={i} style={{ ...styles.msgRow, alignSelf: m.sender === 'rep' ? 'flex-end' : 'flex-start' }}>
-                  {m.sender !== 'system' && <div style={styles.msgLabel}>{m.sender === 'rep' ? (m.repName || 'You') : 'Visitor'}</div>}
-                  <div style={{
-                    ...styles.msgBub,
-                    background: m.sender === 'rep' ? '#1B1A18' : (m.sender === 'system' ? '#F2F2F2' : '#fff'),
-                    color: m.sender === 'rep' ? '#fff' : (m.sender === 'system' ? '#666' : '#1B1A18'),
-                    border: m.sender === 'visitor' ? '1px solid #E7E2D8' : 'none'
-                  }}>{m.text}</div>
+                <div key={i} style={{ ...s.msgRow, alignSelf: m.sender === 'rep' ? 'flex-end' : 'flex-start' }}>
+                  {m.sender !== 'system' && <div style={s.msgLabel}>{m.sender === 'rep' ? (m.repName || 'You') : 'Visitor'}</div>}
+                  <div style={
+                    m.sender === 'rep' ? s.msgBubRep :
+                    m.sender === 'system' ? s.msgBubSystem :
+                    s.msgBubVisitor
+                  }>{m.text}</div>
                 </div>
               ))}
             </div>
             {selectedChat.status === 'active' && (
-              <div style={styles.inputRow}>
-                <input style={styles.input} value={msgInput} onChange={e => setMsgInput(e.target.value)}
+              <div style={s.inputRow}>
+                <input className="forge-input" style={s.input} value={msgInput} onChange={e => setMsgInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && sendReply()} placeholder="Type your reply…" />
-                <button style={styles.sendBtn} onClick={sendReply}>Send</button>
+                <button className="forge-btn-primary" style={s.sendBtn} onClick={sendReply}>Send</button>
               </div>
             )}
           </>
@@ -191,28 +195,38 @@ export default function LiveChat() {
   );
 }
 
-const styles = {
-  wrap: { display: 'flex', height: 'calc(100vh - 0px)', fontFamily: 'sans-serif' },
-  sidebar: { width: 320, borderRight: '1px solid #E7E2D8', background: '#fff', display: 'flex', flexDirection: 'column' },
-  tabs: { display: 'flex', borderBottom: '1px solid #E7E2D8' },
-  tab: { flex: 1, padding: 12, border: 'none', background: '#fff', cursor: 'pointer', fontSize: 12.5 },
-  tabActive: { flex: 1, padding: 12, border: 'none', background: '#1B1A18', color: '#fff', cursor: 'pointer', fontSize: 12.5 },
+const s = {
+  wrap: { display: 'flex', height: '100vh', fontFamily: "'Inter', 'Segoe UI', sans-serif", background: color.bg, color: color.ink },
+
+  listPanel: { width: 320, flex: '0 0 auto', borderRight: `1px solid ${color.border}`, background: color.surface, display: 'flex', flexDirection: 'column' },
+  tabs: { display: 'flex', borderBottom: `1px solid ${color.border}` },
+  tab: { flex: 1, padding: 12, border: 'none', background: color.surface, color: color.inkSoft, cursor: 'pointer', fontSize: 12.5, fontWeight: 600 },
+  tabActive: { flex: 1, padding: 12, border: 'none', background: color.accent, color: '#fff', cursor: 'pointer', fontSize: 12.5, fontWeight: 600 },
   list: { flex: 1, overflowY: 'auto' },
-  empty: { padding: 16, fontSize: 12.5, color: '#999' },
-  item: { padding: 12, borderBottom: '1px solid #F0EEE8', cursor: 'pointer' },
-  itemName: { fontWeight: 600, fontSize: 13.5 },
-  itemContact: { fontSize: 12, color: '#666' },
-  itemAgent: { fontSize: 11, color: '#999', marginTop: 2 },
-  acceptBtn: { marginTop: 6, width: '100%', background: '#1B1A18', color: '#fff', border: 'none', padding: 6, borderRadius: 6, cursor: 'pointer', fontSize: 12 },
-  chatPanel: { flex: 1, display: 'flex', flexDirection: 'column', background: '#FBFAF7' },
-  noChat: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' },
-  chatHead: { padding: 14, borderBottom: '1px solid #E7E2D8', background: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  closeBtn: { background: '#F2F2F2', border: 'none', padding: '6px 12px', borderRadius: 7, cursor: 'pointer' },
-  chatBody: { flex: 1, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 10 },
-  msgRow: { display: 'flex', flexDirection: 'column', maxWidth: '70%' },
-  msgLabel: { fontSize: 10.5, color: '#999', marginBottom: 2 },
-  msgBub: { padding: '9px 13px', borderRadius: 12, fontSize: 14 },
-  inputRow: { borderTop: '1px solid #E7E2D8', padding: 12, background: '#fff', display: 'flex', gap: 8 },
-  input: { flex: 1, padding: 10, border: '1px solid #E7E2D8', borderRadius: 9, fontSize: 14 },
-  sendBtn: { background: '#1B1A18', color: '#fff', border: 'none', padding: '0 18px', borderRadius: 9, cursor: 'pointer', fontWeight: 600 }
+  empty: { padding: 16, fontSize: 12.5, color: color.inkFaint },
+  item: { padding: 12, borderBottom: `1px solid ${color.borderSoft}`, cursor: 'pointer' },
+  itemActive: { background: color.accentSoft },
+  itemName: { fontWeight: 600, fontSize: 13.5, color: color.ink },
+  itemContact: { fontSize: 12, color: color.inkSoft },
+  itemAgent: { fontSize: 11, color: color.inkFaint, marginTop: 2 },
+  acceptBtn: { marginTop: 6, width: '100%', background: color.accent, color: '#fff', border: 'none', padding: 7, borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 600 },
+
+  chatPanel: { flex: 1, display: 'flex', flexDirection: 'column', background: color.bg },
+  noChat: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: color.inkFaint, fontSize: 13.5 },
+  chatHead: { padding: 14, borderBottom: `1px solid ${color.border}`, background: color.surface, display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  chatHeadName: { fontWeight: 600, fontSize: 14, color: color.ink },
+  chatHeadContact: { fontSize: 12, color: color.inkSoft },
+  transferSelect: { width: 150 },
+  closeBtn: { background: color.borderSoft, border: 'none', padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 12.5, fontWeight: 600, color: color.ink },
+
+  chatBody: { flex: 1, overflowY: 'auto', padding: 20, display: 'flex', flexDirection: 'column', gap: 12 },
+  msgRow: { display: 'flex', flexDirection: 'column', maxWidth: '68%' },
+  msgLabel: { fontSize: 10.5, color: color.inkFaint, marginBottom: 3 },
+  msgBubRep: { padding: '10px 14px', borderRadius: 12, fontSize: 13.5, background: color.accent, color: '#fff' },
+  msgBubVisitor: { padding: '10px 14px', borderRadius: 12, fontSize: 13.5, background: color.surface, color: color.ink, border: `1px solid ${color.border}` },
+  msgBubSystem: { padding: '10px 14px', borderRadius: 12, fontSize: 13.5, background: color.borderSoft, color: color.inkSoft },
+
+  inputRow: { borderTop: `1px solid ${color.border}`, padding: 14, background: color.surface, display: 'flex', gap: 10 },
+  input: { flex: 1 },
+  sendBtn: { padding: '0 22px', fontWeight: 600, borderRadius: 9, minHeight: 40 },
 };

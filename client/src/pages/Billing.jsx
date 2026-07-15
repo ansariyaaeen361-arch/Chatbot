@@ -1,9 +1,14 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import api from "../api/axios";
+import Sidebar from "../components/Sidebar";
+import { color, layout, globalStyles } from "../theme";
 
 const PLANS = [
-  { id: "basic", name: "Basic", price: "$29", period: "/month", features: ["AI + FAQ chat widget", "Lead capture", "Up to $20/mo AI usage", "1 team member"] },
-  { id: "pro", name: "Pro", price: "$79", period: "/month", features: ["Everything in Basic", "Live agent handoff", "Team management + transfer", "Up to $100/mo AI usage", "Analytics dashboard"] }
+  { id: "basic", name: "Basic", price: "$29", period: "/month", popular: false,
+    features: ["AI + FAQ chat widget", "Lead capture", "Up to $20/mo AI usage", "1 team member"] },
+  { id: "pro", name: "Pro", price: "$79", period: "/month", popular: true,
+    features: ["Everything in Basic", "Live agent handoff", "Team management + transfer", "Up to $100/mo AI usage", "Analytics dashboard"] }
 ];
 
 export default function Billing() {
@@ -11,7 +16,7 @@ export default function Billing() {
   const [loadingPlan, setLoadingPlan] = useState(null);
   const [msg, setMsg] = useState("");
 
-useEffect(() => {
+  useEffect(() => {
     loadStatus();
     const params = new URLSearchParams(window.location.search);
     if (params.get("canceled")) setMsg("Checkout was canceled — no changes made.");
@@ -51,95 +56,136 @@ useEffect(() => {
     }
   }
 
-  if (!status) return <div style={s.loadingWrap}>Loading billing info…</div>;
+  if (!status) {
+    return (
+      <div style={layout.shell} className="forge-shell">
+        <style>{globalStyles}</style>
+        <Sidebar />
+        <main style={layout.main(720)} className="forge-main">
+          <div style={s.loadingRow}>
+            <span className="forge-dot" style={{ ...s.loadingDot, animationDelay: "0s" }} />
+            <span className="forge-dot" style={{ ...s.loadingDot, animationDelay: ".2s" }} />
+            <span className="forge-dot" style={{ ...s.loadingDot, animationDelay: ".4s" }} />
+          </div>
+          <div style={s.loadingText}>Loading billing info…</div>
+        </main>
+      </div>
+    );
+  }
+
+  const usagePct = Math.min(100, (status.monthlySpendUsed / status.monthlySpendCap) * 100);
 
   return (
-    <div style={s.shell}>
-      <div style={s.wrap}>
-        <a href="/dashboard" style={s.backLink}>← Back to dashboard</a>
+    <div style={layout.shell} className="forge-shell">
+      <style>{globalStyles}</style>
+      <Sidebar />
 
+      <main style={layout.main(720)} className="forge-main">
         <header style={s.header}>
           <div style={s.eyebrow}>Workspace</div>
           <h1 style={s.title}>Billing</h1>
           <p style={s.subtitle}>
             Current plan: <strong style={{ textTransform: "capitalize" }}>{status.plan}</strong>
-            {" "}— <span style={{ ...s.statusBadge, ...(status.planStatus === "active" ? s.statusActive : s.statusInactive) }}>{status.planStatus}</span>
+            {" "}<span style={{ ...s.statusBadge, ...(status.planStatus === "active" ? s.statusActive : s.statusInactive) }}>{status.planStatus}</span>
           </p>
         </header>
 
         {msg && <div style={s.toast}>{msg}</div>}
 
         <div style={s.plansGrid}>
-          {PLANS.map((p) => (
-            <div key={p.id} id={`plan-${p.id}`} style={{ ...s.planCard, ...(status.plan === p.id ? s.planCardActive : {}) }}>
-              <div style={s.planName}>{p.name}</div>
-              <div style={s.planPrice}>{p.price}<span style={s.planPeriod}>{p.period}</span></div>
-              <ul style={s.featureList}>
-                {p.features.map((f, i) => <li key={i} style={s.featureItem}>✓ {f}</li>)}
-              </ul>
-              {status.plan === p.id && status.planStatus === "active" ? (
-                <button style={s.currentBtn} disabled>Current plan</button>
-              ) : (
-                <button style={s.primaryBtn} onClick={() => subscribe(p.id)} disabled={loadingPlan === p.id}>
-                  {loadingPlan === p.id ? "Redirecting to PayPal…" : `Subscribe with PayPal`}
-                </button>
-              )}
-            </div>
-          ))}
+          {PLANS.map((p) => {
+            const isCurrent = status.plan === p.id && status.planStatus === "active";
+            return (
+              <div
+                key={p.id}
+                id={`plan-${p.id}`}
+                className="forge-card"
+                style={{ ...s.planCard, ...(p.popular ? s.planCardPopular : {}) }}
+              >
+                {p.popular && <div style={s.popularBadge}>Most popular</div>}
+                <div style={s.planName}>{p.name}</div>
+                <div style={s.planPrice}>{p.price}<span style={s.planPeriod}>{p.period}</span></div>
+                <ul style={s.featureList}>
+                  {p.features.map((f, i) => (
+                    <li key={i} style={s.featureItem}>
+                      <CheckIcon /> {f}
+                    </li>
+                  ))}
+                </ul>
+                {isCurrent ? (
+                  <button style={s.currentBtn} disabled>Current plan</button>
+                ) : (
+                  <button
+                    className="forge-btn-primary"
+                    style={p.popular ? s.primaryBtnPopular : s.primaryBtn}
+                    onClick={() => subscribe(p.id)}
+                    disabled={loadingPlan === p.id}
+                  >
+                    {loadingPlan === p.id ? "Redirecting to PayPal…" : "Subscribe with PayPal"}
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {status.planStatus === "active" && (
           <button style={s.cancelLink} onClick={cancelPlan}>Cancel subscription</button>
         )}
 
-        <div style={s.usageCard}>
+        <div className="forge-card" style={s.usageCard}>
           <div style={s.usageLabel}>AI usage this month</div>
           <div style={s.usageBarTrack}>
-            <div style={{ ...s.usageBarFill, width: `${Math.min(100, (status.monthlySpendUsed / status.monthlySpendCap) * 100)}%` }} />
+            <div style={{ ...s.usageBarFill, width: `${usagePct}%` }} />
           </div>
           <div style={s.usageText}>${status.monthlySpendUsed.toFixed(2)} of ${status.monthlySpendCap} used</div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
 
-const color = {
-  bg: "#F6F5F2", surface: "#FFFFFF", border: "#E3DED4", borderSoft: "#EEEAE2",
-  ink: "#1C1B19", inkSoft: "#6E685F", inkFaint: "#9B9488",
-  accent: "#1F4B3F", accentSoft: "#E8EFEC", danger: "#B3261E",
-};
+function CheckIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" style={s.checkIcon}>
+      <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 const s = {
-  shell: { minHeight: "100vh", background: color.bg, fontFamily: "'Segoe UI', ui-sans-serif, system-ui, sans-serif", color: color.ink, padding: "36px 24px" },
-  wrap: { maxWidth: 680, margin: "0 auto" },
-  backLink: { fontSize: 12.5, color: color.inkSoft, textDecoration: "none" },
-  header: { margin: "16px 0 20px" },
-  eyebrow: { fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: color.inkFaint, fontWeight: 600, marginBottom: 4 },
-  title: { fontSize: 24, fontWeight: 700, margin: "0 0 6px", letterSpacing: "-0.02em" },
+  header: { margin: "0 0 18px" },
+  eyebrow: { fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: color.inkFaint, fontWeight: 600, marginBottom: 4, fontFamily: "'JetBrains Mono', monospace" },
+  title: { fontSize: 25, fontWeight: 700, margin: "0 0 8px", letterSpacing: "-0.02em", fontFamily: "'Space Grotesk', sans-serif" },
   subtitle: { fontSize: 13.5, color: color.inkSoft, margin: 0 },
   statusBadge: { fontSize: 11, fontWeight: 700, padding: "2px 9px", borderRadius: 999, textTransform: "capitalize" },
-  statusActive: { background: color.accentSoft, color: color.accent },
+  statusActive: { background: color.successSoft, color: color.successText },
   statusInactive: { background: color.borderSoft, color: color.inkSoft },
-  toast: { background: color.accentSoft, color: color.accent, padding: "10px 14px", borderRadius: 9, fontSize: 12.5, marginBottom: 18 },
+  toast: { background: color.successSoft, color: color.successText, padding: "10px 14px", borderRadius: 9, fontSize: 12.5, marginBottom: 18, fontWeight: 600 },
 
-  plansGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 },
-  planCard: { background: color.surface, border: `1px solid ${color.border}`, borderRadius: 14, padding: 22 },
-  planCardActive: { border: `2px solid ${color.accent}` },
-  planName: { fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: color.inkSoft },
-  planPrice: { fontSize: 28, fontWeight: 700, margin: "6px 0 14px" },
+  plansGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginBottom: 16, marginTop: 20 },
+  planCard: { position: "relative", background: color.surface, border: `1px solid ${color.border}`, borderRadius: 16, padding: "26px 24px 24px" },
+  planCardPopular: { border: `2px solid ${color.accent}`, boxShadow: "0 8px 24px rgba(91,91,214,.12)" },
+  popularBadge: { position: "absolute", top: -12, left: 24, background: color.accent, color: "#fff", fontSize: 10.5, fontWeight: 700, padding: "4px 12px", borderRadius: 999, letterSpacing: "0.03em" },
+  planName: { fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: color.inkSoft },
+  planPrice: { fontSize: 32, fontWeight: 700, margin: "8px 0 18px", fontFamily: "'Space Grotesk', sans-serif", color: color.ink },
   planPeriod: { fontSize: 13, fontWeight: 400, color: color.inkSoft },
-  featureList: { listStyle: "none", padding: 0, margin: "0 0 18px", display: "flex", flexDirection: "column", gap: 8 },
-  featureItem: { fontSize: 13, color: color.inkSoft },
-  primaryBtn: { width: "100%", background: color.accent, color: "#fff", border: "none", padding: "11px", borderRadius: 9, fontWeight: 600, fontSize: 13.5, cursor: "pointer" },
-  currentBtn: { width: "100%", background: color.borderSoft, color: color.inkSoft, border: "none", padding: "11px", borderRadius: 9, fontWeight: 600, fontSize: 13.5 },
+  featureList: { listStyle: "none", padding: 0, margin: "0 0 20px", display: "flex", flexDirection: "column", gap: 10 },
+  featureItem: { display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: color.ink },
+  checkIcon: { color: color.accent, flex: "0 0 auto" },
+
+  primaryBtn: { width: "100%", background: color.ink, color: "#fff", border: "none", padding: "12px", borderRadius: 10, fontWeight: 600, fontSize: 13.5, cursor: "pointer" },
+  primaryBtnPopular: { width: "100%", background: color.accent, color: "#fff", border: "none", padding: "12px", borderRadius: 10, fontWeight: 600, fontSize: 13.5, cursor: "pointer" },
+  currentBtn: { width: "100%", background: color.borderSoft, color: color.inkSoft, border: "none", padding: "12px", borderRadius: 10, fontWeight: 600, fontSize: 13.5 },
   cancelLink: { background: "none", border: "none", color: color.danger, fontSize: 12.5, textDecoration: "underline", cursor: "pointer", marginBottom: 24 },
 
-  usageCard: { background: color.surface, border: `1px solid ${color.border}`, borderRadius: 14, padding: 20 },
-  usageLabel: { fontSize: 12.5, fontWeight: 600, color: color.inkSoft, marginBottom: 8 },
+  usageCard: { padding: 22 },
+  usageLabel: { fontSize: 12.5, fontWeight: 600, color: color.inkSoft, marginBottom: 10 },
   usageBarTrack: { height: 10, background: color.borderSoft, borderRadius: 999, overflow: "hidden" },
-  usageBarFill: { height: "100%", background: color.accent },
-  usageText: { fontSize: 12, color: color.inkFaint, marginTop: 6 },
+  usageBarFill: { height: "100%", background: color.accent, borderRadius: 999, transition: "width .3s" },
+  usageText: { fontSize: 12, color: color.inkFaint, marginTop: 8 },
 
-  loadingWrap: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: color.bg, color: color.inkSoft },
+  loadingRow: { display: "flex", gap: 6, marginTop: 100, justifyContent: "center" },
+  loadingDot: { width: 8, height: 8, borderRadius: "50%", background: color.accent, display: "inline-block" },
+  loadingText: { color: color.inkSoft, fontSize: 13.5, textAlign: "center", marginTop: 10 },
 };

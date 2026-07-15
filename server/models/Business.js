@@ -15,7 +15,24 @@ const businessSchema = new mongoose.Schema({
     type: String,
     default: "",
   },
-
+  launcherType: {
+    type: String,
+    enum: ["default", "image", "video"],
+    default: "default",
+  },
+  launcherMediaUrl: {
+    type: String,
+    default: "",
+  },
+  welcomeMessage: {
+    type: String,
+    default: "Hi! How can I help you today?",
+  },
+  launcherPosition: {
+    type: String,
+    enum: ["left", "right"],
+    default: "right",
+  },
   brandColor: {
     type: String,
     default: "#1B1A18",
@@ -61,6 +78,14 @@ const businessSchema = new mongoose.Schema({
       answer: {
         type: String,
       },
+    },
+  ],
+  knowledgeBase: [
+    {
+      title: { type: String, default: "" },
+      content: { type: String, required: true },
+      source: { type: String, default: "manual" }, // 'manual' | 'scraped'
+      addedAt: { type: Date, default: Date.now },
     },
   ],
 

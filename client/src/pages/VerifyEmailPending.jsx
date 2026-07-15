@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import api from "../api/axios";
+import { color, globalStyles } from "../theme";
 
 export default function VerifyEmailPending() {
   const [status, setStatus] = useState("idle"); // idle | sending | sent | error
@@ -20,32 +22,66 @@ export default function VerifyEmailPending() {
 
   return (
     <div style={s.wrap}>
-      <div style={s.card}>
-        <div style={{ ...s.badge, background: "#FFF4D6", color: "#8A6D00" }}>✉</div>
+      <style>{globalStyles}</style>
+      <div style={s.glowTop} />
+      <div style={s.glowBottom} />
+
+      <div className="forge-card" style={s.card}>
+        <div style={s.logoRow}>
+          <div style={s.logoMark}>M</div>
+          <div style={s.logoWordmark}>MentalForge <span style={s.logoWordmarkAccent}>AI</span></div>
+        </div>
+
+        <div style={s.badge}>
+          <MailIcon />
+        </div>
         <h2 style={s.title}>Verify your email</h2>
         <p style={s.desc}>
           We've sent a verification link to your email address.
           Please check your inbox and click the link to activate your account.
         </p>
 
-        {message && <p style={{ ...s.desc, color: status === "error" ? "#B3453B" : "#2B5C3A" }}>{message}</p>}
+        {message && (
+          <p style={{ ...s.statusMsg, color: status === "error" ? color.danger : color.successText }}>
+            {message}
+          </p>
+        )}
 
-        <button style={s.btnFull} onClick={resend} disabled={status === "sending"}>
+        <button className="forge-btn-primary" style={s.btnFull} onClick={resend} disabled={status === "sending"}>
           {status === "sending" ? "Sending…" : "Resend verification email"}
         </button>
 
-        <a href="/login" style={s.backLink}>Back to login</a>
+        <Link to="/login" style={s.backLink}>Back to login</Link>
       </div>
     </div>
   );
 }
 
+function MailIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <rect x="2" y="4" width="20" height="16" rx="2.5" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M2.5 6.5L12 13l9.5-6.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 const s = {
-  wrap: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#EDEFEE", fontFamily: "'Inter', 'Segoe UI', sans-serif", padding: 20 },
-  card: { background: "#fff", border: "1px solid #DBDFDC", borderRadius: 14, padding: "36px 32px", maxWidth: 380, width: "100%", textAlign: "center", boxShadow: "0 2px 10px rgba(0,0,0,.04)" },
-  badge: { width: 48, height: 48, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 700, margin: "0 auto 14px" },
-  title: { fontSize: 19, fontWeight: 700, margin: "0 0 8px", color: "#1A1918" },
-  desc: { fontSize: 13.5, color: "#686C67", lineHeight: 1.5, margin: "0 0 20px" },
-  btnFull: { width: "100%", background: "#2F5D8A", color: "#fff", border: "none", padding: "11px", borderRadius: 9, fontWeight: 600, fontSize: 14, cursor: "pointer" },
-  backLink: { display: "inline-block", marginTop: 16, fontSize: 12.5, color: "#686C67", textDecoration: "none" },
-};  
+  wrap: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: color.bg, fontFamily: "'Inter', 'Segoe UI', sans-serif", position: "relative", overflow: "hidden", padding: 20 },
+  glowTop: { position: "absolute", top: -160, left: "50%", transform: "translateX(-50%)", width: 480, height: 480, borderRadius: "50%", background: `radial-gradient(circle, ${color.accent}22, transparent 70%)`, pointerEvents: "none" },
+  glowBottom: { position: "absolute", bottom: -200, right: -120, width: 420, height: 420, borderRadius: "50%", background: `radial-gradient(circle, ${color.accentDeep}18, transparent 70%)`, pointerEvents: "none" },
+
+  card: { position: "relative", background: color.surface, border: `1px solid ${color.border}`, borderRadius: 18, padding: "36px 32px", maxWidth: 380, width: "100%", textAlign: "center", boxShadow: "0 24px 60px -24px rgba(26,27,46,.18)" },
+
+  logoRow: { display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 22 },
+  logoMark: { width: 36, height: 36, borderRadius: 10, background: color.accent, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 15, fontFamily: "'Space Grotesk', sans-serif", flex: "0 0 auto" },
+  logoWordmark: { fontSize: 15.5, fontWeight: 700, color: color.ink, letterSpacing: "-0.01em", fontFamily: "'Space Grotesk', sans-serif" },
+  logoWordmarkAccent: { color: color.accent },
+
+  badge: { width: 48, height: 48, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", background: color.accentSoft, color: color.accentDeep },
+  title: { fontSize: 19, fontWeight: 700, margin: "0 0 8px", color: color.ink, fontFamily: "'Space Grotesk', sans-serif" },
+  desc: { fontSize: 13.5, color: color.inkSoft, lineHeight: 1.5, margin: "0 0 20px" },
+  statusMsg: { fontSize: 13, lineHeight: 1.5, margin: "-8px 0 20px", fontWeight: 600 },
+  btnFull: { width: "100%", padding: "11px", borderRadius: 9, fontWeight: 600, fontSize: 14, border: "none", cursor: "pointer" },
+  backLink: { display: "inline-block", marginTop: 16, fontSize: 12.5, color: color.inkSoft, textDecoration: "none" },
+};

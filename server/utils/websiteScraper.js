@@ -1,7 +1,17 @@
 const cheerio = require('cheerio');
 
+function normalizeUrl(url) {
+  const trimmed = url.trim();
+  if (!/^https?:\/\//i.test(trimmed)) {
+    return 'https://' + trimmed;
+  }
+  return trimmed;
+}
+
 async function scrapeWebsite(url) {
-  const res = await fetch(url, {
+  const targetUrl = normalizeUrl(url);
+
+  const res = await fetch(targetUrl, {
     headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MentalForgeBot/1.0)' }
   });
   if (!res.ok) throw new Error('Could not fetch website');

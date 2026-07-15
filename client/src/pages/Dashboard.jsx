@@ -1,13 +1,27 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/axios";
+import Sidebar from "../components/Sidebar";
+import { color, layout, globalStyles } from "../theme";
 
 const API_ORIGIN = (api.defaults.baseURL || "").replace(/\/api\/?$/, "");
 
-const SECTION_IDS = ["quickstart", "profile", "branding", "faqs", "embed"];
+const SECTION_IDS = ["quickstart", "profile", "branding", "faqs", "knowledge", "embed"];
+
+const SETUP_SECTIONS = [
+  ["quickstart", "01", "Quick start"],
+  ["profile", "02", "Business profile"],
+  ["branding", "03", "Branding"],
+  ["faqs", "04", "FAQs"],
+  ["knowledge", "05", "Knowledge base"],
+  ["embed", "06", "Install widget"],
+];
+
+const TOTAL_STEPS = "06";
 
 export default function Dashboard() {
-  const { user, businessId, logout } = useAuth();
+  const { businessId } = useAuth();
   const [business, setBusiness] = useState(null);
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
@@ -15,6 +29,13 @@ export default function Dashboard() {
   const [analyzing, setAnalyzing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [activeSection, setActiveSection] = useState("quickstart");
+
+  const [knowledgeTitle, setKnowledgeTitle] = useState("");
+  const [knowledgeContent, setKnowledgeContent] = useState("");
+  const [addingKnowledge, setAddingKnowledge] = useState(false);
+  const [knowledgeScanUrl, setKnowledgeScanUrl] = useState("");
+  const [scanningKnowledge, setScanningKnowledge] = useState(false);
+  const [knowledgeError, setKnowledgeError] = useState("");
 
   useEffect(() => {
     api.get("/business/me").then((res) => setBusiness(res.data));
@@ -80,6 +101,8 @@ export default function Dashboard() {
         tone: business.tone,
         brandColor: business.brandColor,
         ctaLinks: business.ctaLinks,
+        welcomeMessage: business.welcomeMessage,
+        launcherPosition: business.launcherPosition,
       };
       const res = await api.put("/business/me", payload);
       setBusiness(res.data);
@@ -100,6 +123,22 @@ export default function Dashboard() {
       headers: { "Content-Type": "multipart/form-data" },
     });
     setBusiness((prev) => ({ ...prev, logoUrl: res.data.logoUrl }));
+  };
+
+  const uploadLauncherMedia = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("media", file);
+    const res = await api.post("/business/launcher", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    setBusiness((prev) => ({ ...prev, launcherType: res.data.launcherType, launcherMediaUrl: res.data.launcherMediaUrl }));
+  };
+
+  const removeLauncherMedia = async () => {
+    const res = await api.delete("/business/launcher");
+    setBusiness((prev) => ({ ...prev, launcherType: res.data.launcherType, launcherMediaUrl: res.data.launcherMediaUrl }));
   };
 
   const addService = () => updateField("services", [...business.services, ""]);
@@ -136,6 +175,51 @@ export default function Dashboard() {
   const removeFaq = (i) =>
     updateField("faqs", business.faqs.filter((_, idx) => idx !== i));
 
+  const addManualKnowledge = async () => {
+    if (!knowledgeContent.trim()) return;
+    setKnowledgeError("");
+    setAddingKnowledge(true);
+    try {
+      const res = await api.post("/business/knowledge", {
+        title: knowledgeTitle,
+        content: knowledgeContent,
+      });
+      setBusiness((prev) => ({ ...prev, knowledgeBase: res.data.knowledgeBase }));
+      setKnowledgeTitle("");
+      setKnowledgeContent("");
+      flashMsg("Knowledge entry added.");
+    } catch (err) {
+      setKnowledgeError(err.response?.data?.error || "Could not add that entry");
+    } finally {
+      setAddingKnowledge(false);
+    }
+  };
+
+  const scanKnowledgeUrl = async () => {
+    if (!knowledgeScanUrl.trim()) return;
+    setKnowledgeError("");
+    setScanningKnowledge(true);
+    try {
+      const res = await api.post("/business/knowledge/scan", { url: knowledgeScanUrl });
+      setBusiness((prev) => ({ ...prev, knowledgeBase: res.data.knowledgeBase }));
+      setKnowledgeScanUrl("");
+      flashMsg("Page scanned and added.");
+    } catch (err) {
+      setKnowledgeError(err.response?.data?.error || "Could not scan that page");
+    } finally {
+      setScanningKnowledge(false);
+    }
+  };
+
+  const removeKnowledge = async (entryId) => {
+    try {
+      const res = await api.delete(`/business/knowledge/${entryId}`);
+      setBusiness((prev) => ({ ...prev, knowledgeBase: res.data.knowledgeBase }));
+    } catch (err) {
+      flashMsg("Failed to remove entry.");
+    }
+  };
+
   const embedCode = `<script src="${API_ORIGIN}/widget.js" data-business="${businessId}"></script>`;
 
   const copyEmbed = () => {
@@ -146,16 +230,17 @@ export default function Dashboard() {
 
   if (!business) {
     return (
-      <div style={s.loadingWrap}>
-        <style>{fontImport}</style>
-        <div style={s.loadingCard}>
+      <div style={layout.shell} className="forge-shell">
+        <style>{globalStyles}</style>
+        <Sidebar setupSections={SETUP_SECTIONS} activeSection={activeSection} onSectionClick={setActiveSection} />
+        <main style={layout.main(780)} className="forge-main">
           <div style={s.loadingRow}>
             <span className="forge-dot" style={{ ...s.loadingDot, animationDelay: "0s" }} />
             <span className="forge-dot" style={{ ...s.loadingDot, animationDelay: ".2s" }} />
             <span className="forge-dot" style={{ ...s.loadingDot, animationDelay: ".4s" }} />
           </div>
           <div style={s.loadingText}>Loading your workspace…</div>
-        </div>
+        </main>
       </div>
     );
   }
@@ -166,74 +251,15 @@ export default function Dashboard() {
   const servicesCount = (business.services || []).filter((x) => x && x.trim()).length;
   const faqsCount = (business.faqs || []).filter((f) => f.question && f.answer).length;
   const ctaCount = (business.ctaLinks || []).filter((c) => c.label && c.url).length;
+  const knowledgeCount = (business.knowledgeBase || []).length;
+  const isTrial = business.plan === "trial";
 
   return (
-    <div style={s.shell} className="forge-shell">
+    <div style={layout.shell} className="forge-shell">
       <style>{globalStyles}</style>
+      <Sidebar setupSections={SETUP_SECTIONS} activeSection={activeSection} onSectionClick={setActiveSection} />
 
-      {/* ---------- Sidebar ---------- */}
-      <aside style={s.sidebar} className="forge-sidebar">
-        <div style={s.brandRow}>
-          <div style={{ ...s.brandMark, background: business.brandColor || color.accent }}>
-            {business.logoUrl
-              ? <img src={`${API_ORIGIN}${business.logoUrl}`} alt={business.name} style={s.brandMarkImg} />
-              : initial}
-          </div>
-          <div>
-            <div style={s.brandName}>{business.name || "Your business"}</div>
-            <div style={s.brandPlan}>{(business.plan || "trial").toUpperCase()} PLAN</div>
-          </div>
-        </div>
-
-        <nav style={s.nav}>
-          <div style={s.navGroupLabel}>Setup</div>
-          {[
-            ["quickstart", "01", "Quick start"],
-            ["profile", "02", "Business profile"],
-            ["branding", "03", "Branding"],
-            ["faqs", "04", "FAQs"],
-            ["embed", "05", "Install widget"],
-          ].map(([id, idx, label]) => (
-            <a
-              key={id}
-              href={`#${id}`}
-              className="forge-nav"
-              style={{ ...s.navItem, ...(activeSection === id ? s.navItemActive : {}) }}
-              onClick={() => setActiveSection(id)}
-            >
-              <span style={{ ...s.navIndex, ...(activeSection === id ? s.navIndexActive : {}) }}>{idx}</span>
-              {label}
-            </a>
-          ))}
-
-          <div style={s.navDivider} />
-          <div style={s.navGroupLabel}>Workspace</div>
-          <a href="/livechat" className="forge-nav" style={s.navItem}><NavIcon name="chat" />Live chat inbox</a>
-          <a href="/team" className="forge-nav" style={s.navItem}><NavIcon name="users" />Team</a>
-          <a href="/analytics" className="forge-nav" style={s.navItem}><NavIcon name="chart" />Analytics</a>
-          <a href="/billing" className="forge-nav" style={s.navItem}><NavIcon name="card" />Billing</a>
-        </nav>
-
-        <div style={s.sidebarFooter}>
-  <div style={s.userRow}>
-    <div style={s.userAvatar}>{(user?.name || "U").charAt(0).toUpperCase()}</div>
-    <div style={{ flex: 1 }}>
-      <div style={s.userName}>{user?.name}</div>
-      <div style={s.userRole}>{user?.role}</div>
-    </div>
-    <a href="/account" style={s.settingsIcon} className="forge-ghost" title="Account settings">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-        <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" strokeWidth="1.8"/>
-        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" strokeWidth="1.8"/>
-      </svg>
-    </a>
-  </div>
-  <button className="forge-ghost" style={s.signOutBtn} onClick={logout}>Sign out</button>
-</div>
-      </aside>
-
-      {/* ---------- Main content ---------- */}
-      <main style={s.main} className="forge-main">
+      <main style={layout.main(780)} className="forge-main">
         <header style={s.pageHeader}>
           <div>
             <div style={s.eyebrow}>Workspace settings</div>
@@ -243,7 +269,6 @@ export default function Dashboard() {
           {savedMsg && <div style={s.toast}>✓ {savedMsg}</div>}
         </header>
 
-        {/* ---- Readiness meter (signature element) ---- */}
         <div style={s.forgeMeter}>
           <div style={s.forgeMeterTop}>
             <span style={s.forgeMeterLabel}>Assistant readiness</span>
@@ -264,12 +289,12 @@ export default function Dashboard() {
           <div style={s.overviewChips}>
             <StatChip icon="briefcase" label="Services" value={servicesCount} />
             <StatChip icon="help" label="FAQs" value={faqsCount} />
+            <StatChip icon="book" label="Knowledge" value={knowledgeCount} />
             <StatChip icon="link" label="CTA links" value={ctaCount} />
             <StatChip icon="image" label="Logo" value={business.logoUrl ? "Uploaded" : "Missing"} muted={!business.logoUrl} />
           </div>
         </div>
 
-        {/* ---- Quick start ---- */}
         <section id="quickstart" style={s.section}>
           <SectionCard
             step="01"
@@ -292,7 +317,6 @@ export default function Dashboard() {
           </SectionCard>
         </section>
 
-        {/* ---- Business profile ---- */}
         <section id="profile" style={s.section}>
           <SectionCard step="02" icon="briefcase" title="Business profile" desc="This is what your AI assistant knows about you.">
             <Field label="Business name">
@@ -334,7 +358,6 @@ export default function Dashboard() {
           </SectionCard>
         </section>
 
-        {/* ---- Branding ---- */}
         <section id="branding" style={s.section}>
           <SectionCard step="03" icon="palette" title="Branding" desc="Make the widget look like it belongs on your site.">
             <div style={s.twoCol}>
@@ -346,7 +369,7 @@ export default function Dashboard() {
                       : <span style={s.logoPlaceholder}>{initial}</span>}
                   </div>
                   <label className="forge-ghost" style={s.uploadBtn}>
-                    Upload image
+                     Upload image/video
                     <input type="file" accept="image/*" onChange={uploadLogo} style={{ display: "none" }} />
                   </label>
                 </div>
@@ -371,6 +394,53 @@ export default function Dashboard() {
               </div>
               <button className="forge-ghost" style={s.ghostBtn} onClick={addCta}>+ Add link</button>
             </Field>
+
+            <Field label="Welcome message">
+              <textarea
+                className="forge-input"
+                style={{ ...s.input, height: 60, resize: "vertical" }}
+                value={business.welcomeMessage || ""}
+                onChange={(e) => updateField("welcomeMessage", e.target.value)}
+                placeholder="Hi! How can I help you today?"
+              />
+            </Field>
+
+            <div style={s.twoCol}>
+              <Field label="Launcher position">
+                <select
+                  className="forge-input"
+                  style={s.input}
+                  value={business.launcherPosition || "right"}
+                  onChange={(e) => updateField("launcherPosition", e.target.value)}
+                >
+                  <option value="right">Bottom right</option>
+                  <option value="left">Bottom left</option>
+                </select>
+              </Field>
+
+              <Field label="Launcher icon">
+                <div style={s.logoUploadRow}>
+                  <div style={s.logoPreviewBox}>
+                    {business.launcherType === "image" && business.launcherMediaUrl ? (
+                      <img src={`${API_ORIGIN}${business.launcherMediaUrl}`} alt="Launcher preview" style={s.logoPreviewImg} />
+                    ) : business.launcherType === "video" && business.launcherMediaUrl ? (
+                      <video src={`${API_ORIGIN}${business.launcherMediaUrl}`} style={s.logoPreviewImg} muted loop autoPlay playsInline />
+                    ) : (
+                      <span style={s.logoPlaceholder}>💬</span>
+                    )}
+                  </div>
+                  <label className="forge-ghost" style={s.uploadBtn}>
+                    Upload
+                    <input type="file" accept="image/*,video/*" onChange={uploadLauncherMedia} style={{ display: "none" }} />
+                  </label>
+                </div>
+                {business.launcherType && business.launcherType !== "default" && (
+                  <button className="forge-ghost" style={{ ...s.ghostBtn, marginTop: 8 }} onClick={removeLauncherMedia}>
+                    Reset to default icon
+                  </button>
+                )}
+              </Field>
+            </div>
           </SectionCard>
         </section>
 
@@ -380,7 +450,6 @@ export default function Dashboard() {
           </button>
         </div>
 
-        {/* ---- FAQs ---- */}
         <section id="faqs" style={s.section}>
           <SectionCard
             step="04"
@@ -402,9 +471,82 @@ export default function Dashboard() {
           </SectionCard>
         </section>
 
-        {/* ---- Embed ---- */}
+        <section id="knowledge" style={s.section}>
+          <SectionCard
+            step="05"
+            icon="book"
+            title="Knowledge base"
+            desc="Give the AI more to work with beyond FAQs. Each scan reads one page only — add your About, Services, Pricing, and Contact pages separately for the best results."
+          >
+            {knowledgeError && <div style={s.errorBox}>{knowledgeError}</div>}
+
+            <div style={s.knowledgeCount}>{knowledgeCount} / 15 entries used</div>
+
+            {knowledgeCount > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                {business.knowledgeBase.map((entry) => (
+                  <div key={entry._id} className="forge-card" style={s.knowledgeCard}>
+                    <div style={s.knowledgeCardHead}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={s.knowledgeTitle}>{entry.title}</div>
+                        <span style={entry.source === "scraped" ? s.sourceBadgeScraped : s.sourceBadgeManual}>
+                          {entry.source === "scraped" ? "Scanned from site" : "Manual"}
+                        </span>
+                      </div>
+                      <button style={s.faqRemove} onClick={() => removeKnowledge(entry._id)}>Remove</button>
+                    </div>
+                    <p style={s.knowledgePreview}>
+                      {entry.content.slice(0, 200)}{entry.content.length > 200 ? "…" : ""}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={s.knowledgeAddGrid}>
+              <div style={s.knowledgeAddCol}>
+                <div style={s.knowledgeAddLabel}>Scan a page</div>
+                <div style={s.inlineRow}>
+                  <input
+                    className="forge-input"
+                    style={s.input}
+                    placeholder="https://yourbusiness.com/about"
+                    value={knowledgeScanUrl}
+                    onChange={(e) => setKnowledgeScanUrl(e.target.value)}
+                  />
+                  <button className="forge-btn-primary" style={s.primaryBtn} onClick={scanKnowledgeUrl} disabled={scanningKnowledge}>
+                    {scanningKnowledge ? "Scanning…" : "Scan"}
+                  </button>
+                </div>
+                <p style={s.knowledgeHint}>One page per scan — this only reads the exact URL you enter, not your whole site.</p>
+              </div>
+
+              <div style={s.knowledgeAddCol}>
+                <div style={s.knowledgeAddLabel}>Add manually</div>
+                <input
+                  className="forge-input"
+                  style={{ ...s.input, marginBottom: 8 }}
+                  placeholder="Title (e.g. Return policy)"
+                  value={knowledgeTitle}
+                  onChange={(e) => setKnowledgeTitle(e.target.value)}
+                />
+                <textarea
+                  className="forge-input"
+                  style={{ ...s.input, height: 72, resize: "vertical", marginBottom: 8 }}
+                  placeholder="Paste the details here…"
+                  value={knowledgeContent}
+                  onChange={(e) => setKnowledgeContent(e.target.value)}
+                />
+                <button className="forge-ghost" style={s.ghostBtn} onClick={addManualKnowledge} disabled={addingKnowledge}>
+                  {addingKnowledge ? "Adding…" : "+ Add entry"}
+                </button>
+              </div>
+            </div>
+          </SectionCard>
+        </section>
+
         <section id="embed" style={s.section}>
-          <SectionCard step="05" icon="code" title="Install on your website" desc="Paste this once, right before the closing </body> tag.">
+          <SectionCard step="06" icon="code" title="Install on your website" desc="Paste this once, right before the closing </body> tag.">
             <div style={s.codeBoxWrap}>
               <div style={s.codeBoxTag}>WIDGET · EMBED</div>
               <div style={s.codeBox}>
@@ -430,7 +572,7 @@ function SectionCard({ step, icon, title, desc, children }) {
               <NavIcon name={icon} size={16} />
             </div>
           )}
-          <div style={s.cardStepTag}>{step} / 05</div>
+          <div style={s.cardStepTag}>{step} / {TOTAL_STEPS}</div>
         </div>
         <h2 style={s.cardTitle}>{title}</h2>
         {desc && <p style={s.cardDesc}>{desc}</p>}
@@ -463,32 +605,9 @@ function StatChip({ icon, label, value, muted }) {
   );
 }
 
-/* ---------------- Icons ----------------
-   Small inline stroke-icon set so the sidebar/cards don't depend on an icon
-   library just for a handful of glyphs. */
 function NavIcon({ name, size = 15 }) {
   const common = { stroke: "currentColor", strokeWidth: 1.8, fill: "none", strokeLinecap: "round", strokeLinejoin: "round" };
   const icons = {
-    chat: <path {...common} d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" />,
-    users: (
-      <g {...common}>
-        <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-        <circle cx="8.5" cy="7" r="4" />
-        <path d="M22 21v-2a4 4 0 00-3-3.87M15 3.13a4 4 0 010 7.75" />
-      </g>
-    ),
-    chart: (
-      <g {...common}>
-        <path d="M3 3v18h18" />
-        <path d="M7 15l4-4 3 3 5-6" />
-      </g>
-    ),
-    card: (
-      <g {...common}>
-        <rect x="1.5" y="5" width="21" height="14" rx="2.5" />
-        <path d="M1.5 10h21" />
-      </g>
-    ),
     bolt: <path {...common} d="M13 2 3 14h7l-1 8 10-12h-7l1-8z" />,
     briefcase: (
       <g {...common}>
@@ -509,6 +628,12 @@ function NavIcon({ name, size = 15 }) {
         <circle cx="12" cy="12" r="10" />
         <path d="M9.5 9a2.5 2.5 0 114 2c-.7.6-1.5 1.1-1.5 2.3" />
         <circle cx="12" cy="17" r=".6" fill="currentColor" stroke="none" />
+      </g>
+    ),
+    book: (
+      <g {...common}>
+        <path d="M4 19.5A2.5 2.5 0 016.5 17H20" />
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
       </g>
     ),
     code: (
@@ -538,7 +663,6 @@ function NavIcon({ name, size = 15 }) {
   );
 }
 
-/* ---------------- Readiness logic ---------------- */
 function computeCompleteness(business) {
   const checks = [
     !!business.name,
@@ -549,6 +673,7 @@ function computeCompleteness(business) {
     !!business.logoUrl,
     (business.ctaLinks || []).some((c) => c.label && c.url),
     (business.faqs || []).some((f) => f.question && f.answer),
+    (business.knowledgeBase || []).length > 0,
   ];
   const filled = checks.filter(Boolean).length;
   return Math.round((filled / checks.length) * 100);
@@ -561,112 +686,13 @@ function stageLabel(pct) {
   return "just started";
 }
 
-/* ---------------- Design tokens ----------------
-   Modern indigo palette. sidebar = deep indigo-charcoal workspace rail,
-   bg = cool near-white page, accent (indigo) = primary actions, focus
-   rings, and the readiness meter. Neutrals stay soft and quiet so the
-   indigo is the only saturated color on screen. */
-const color = {
-  sidebar: "#1B1830",
-  sidebarLine: "rgba(255,255,255,.08)",
-  bg: "#F6F7FB",
-  surface: "#FFFFFF",
-  border: "#E6E7EE",
-  borderSoft: "#EEEFF4",
-  ink: "#1A1B2E",
-  inkSoft: "#5C5F73",
-  inkFaint: "#9498A8",
-  accent: "#5B5BD6",
-  accentDeep: "#4A47C0",
-  accentSoft: "#EEEEFB",
-  accentLight: "#A6A6EE",
-  success: "#0E9F6E",
-  danger: "#DC5B54",
-};
-
-const fontImport = `@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap');`;
-
-const globalStyles = `
-${fontImport}
-
-.forge-nav { transition: background .15s ease, color .15s ease, padding-left .15s ease; }
-.forge-nav:hover { background: rgba(255,255,255,.06); color: #fff; padding-left: 14px; }
-.forge-nav:focus-visible { outline: 2px solid ${color.accent}; outline-offset: 2px; }
-
-.forge-btn-primary, .forge-btn-primary-lg { transition: transform .12s ease, box-shadow .12s ease, background .15s ease; }
-.forge-btn-primary:hover, .forge-btn-primary-lg:hover { box-shadow: 0 6px 16px rgba(91,91,214,.30); transform: translateY(-1px); }
-.forge-btn-primary:active, .forge-btn-primary-lg:active { transform: translateY(0) scale(.98); }
-
-.forge-card { transition: box-shadow .2s ease, border-color .2s ease; }
-.forge-card:hover { border-color: #D6D7E4; box-shadow: 0 3px 14px rgba(26,27,46,.06); }
-
-.forge-input { transition: border-color .15s ease, box-shadow .15s ease; }
-.forge-input:focus { outline: none; border-color: ${color.accent}; box-shadow: 0 0 0 3px rgba(91,91,214,.15); }
-
-.forge-ghost { transition: background .15s ease; }
-.forge-ghost:hover { background: #E7E8F0; }
-
-.forge-chip-remove { transition: background .15s ease; }
-.forge-chip-remove:hover { background: #F6DBD9; }
-
-.forge-meter-mask { transition: left .6s cubic-bezier(.4,0,.2,1); }
-.forge-meter-marker { transition: left .6s cubic-bezier(.4,0,.2,1); }
-
-@keyframes forgeDot {
-  0%, 100% { opacity: .35; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.3); }
-}
-.forge-dot { animation: forgeDot 1.1s ease-in-out infinite; }
-
-@media (max-width: 900px) {
-  .forge-shell { flex-direction: column; }
-  .forge-sidebar { width: 100% !important; flex-direction: row !important; flex-wrap: wrap; align-items: center; }
-  .forge-main { padding: 24px 20px 80px !important; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .forge-nav, .forge-btn-primary, .forge-btn-primary-lg, .forge-card,
-  .forge-input, .forge-ghost, .forge-chip-remove, .forge-meter-mask,
-  .forge-meter-marker, .forge-dot { transition: none !important; animation: none !important; }
-}
-`;
-
 const s = {
-  shell: { display: "flex", minHeight: "100vh", background: color.bg, fontFamily: "'Inter', 'Segoe UI', sans-serif", color: color.ink },
-
-  /* Sidebar */
-  sidebar: { width: 250, flex: "0 0 auto", background: color.sidebar, color: "#E7E7F0", display: "flex", flexDirection: "column", padding: "24px 18px", boxSizing: "border-box" },
-  brandRow: { display: "flex", alignItems: "center", gap: 10, marginBottom: 28 },
-  brandMark: { width: 40, height: 40, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif", color: "#fff", fontSize: 15, flex: "0 0 auto", overflow: "hidden", boxShadow: "inset 0 0 0 2px rgba(255,255,255,.18), 0 2px 6px rgba(0,0,0,.35)" },
-  brandMarkImg: { width: "100%", height: "100%", objectFit: "cover" },
-  brandName: { fontWeight: 600, fontSize: 14, letterSpacing: "-0.01em", fontFamily: "'Space Grotesk', sans-serif" },
-  brandPlan: { fontSize: 10, letterSpacing: "0.08em", color: color.accentLight, marginTop: 3, fontFamily: "'JetBrains Mono', monospace" },
-
-  nav: { display: "flex", flexDirection: "column", gap: 2, flex: 1 },
-  navGroupLabel: { fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: "#787C93", fontWeight: 600, margin: "14px 10px 4px", fontFamily: "'JetBrains Mono', monospace" },
-  navItem: { color: "#C6C7D6", textDecoration: "none", fontSize: 13.5, padding: "9px 10px", borderRadius: 8, display: "flex", alignItems: "center", gap: 9 },
-  navItemActive: { background: "rgba(255,255,255,.09)", color: "#fff" },
-  navIndex: { fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, color: color.accentLight, opacity: 0.85 },
-  navIndexActive: { opacity: 1 },
-  navDivider: { height: 1, background: color.sidebarLine, margin: "10px 6px" },
-
-  sidebarFooter: { borderTop: `1px solid ${color.sidebarLine}`, paddingTop: 16, marginTop: 16 },
-  userRow: { display: "flex", alignItems: "center", gap: 8, marginBottom: 10 },
-  userAvatar: { width: 30, height: 30, borderRadius: "50%", background: "rgba(255,255,255,.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12.5, fontWeight: 700 },
-  userName: { fontSize: 12.5, fontWeight: 600 },
-  userRole: { fontSize: 10.5, color: "#9EA0B4", textTransform: "capitalize" },
-  settingsIcon: { width: 26, height: 26, borderRadius: 7, background: "rgba(255,255,255,.06)", color: "#C6C7D6", display: "flex", alignItems: "center", justifyContent: "center", flex: "0 0 auto" },
-  signOutBtn: { width: "100%", background: "rgba(255,255,255,.06)", color: "#E7E7F0", border: "1px solid rgba(255,255,255,.14)", padding: "8px", borderRadius: 8, cursor: "pointer", fontSize: 12.5 },
-
-  /* Main */
-  main: { flex: 1, padding: "36px 48px 100px", maxWidth: 780, margin: "0 auto", width: "100%", boxSizing: "border-box" },
   pageHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 },
   eyebrow: { fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: color.inkFaint, fontWeight: 600, marginBottom: 4, fontFamily: "'JetBrains Mono', monospace" },
   pageTitle: { fontSize: 25, fontWeight: 700, letterSpacing: "-0.02em", margin: 0, fontFamily: "'Space Grotesk', sans-serif" },
   pageSubtitle: { fontSize: 13, color: color.inkSoft, margin: "6px 0 0" },
-  toast: { background: "#E7F4EC", color: "#0A6B49", padding: "8px 14px", borderRadius: 8, fontSize: 12.5, fontWeight: 600, alignSelf: "center" },
+  toast: { background: color.successSoft, color: color.successText, padding: "8px 14px", borderRadius: 8, fontSize: 12.5, fontWeight: 600, alignSelf: "center" },
 
-  /* Readiness meter — signature element */
   forgeMeter: { background: color.surface, border: `1px solid ${color.border}`, borderRadius: 12, padding: "14px 16px", marginBottom: 24 },
   forgeMeterTop: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 9 },
   forgeMeterLabel: { fontSize: 12.5, fontWeight: 600, color: color.ink },
@@ -718,7 +744,22 @@ const s = {
   ctaRow: { display: "flex", gap: 8 },
 
   faqCard: { border: `1px solid ${color.borderSoft}`, borderRadius: 10, padding: 14, marginBottom: 12, background: "#FBFBFD" },
-  faqRemove: { marginTop: 8, background: "none", border: "none", color: color.danger, fontSize: 12, cursor: "pointer", padding: 0, textDecoration: "underline" },
+  faqRemove: { marginTop: 0, background: "none", border: "none", color: color.danger, fontSize: 12, cursor: "pointer", padding: 0, textDecoration: "underline", flex: "0 0 auto" },
+
+  errorBox: { background: color.dangerSoft, color: color.danger, padding: "9px 12px", borderRadius: 8, fontSize: 12.5, marginBottom: 14, fontWeight: 600 },
+
+  knowledgeCount: { fontSize: 11.5, color: color.inkFaint, fontFamily: "'JetBrains Mono', monospace", marginBottom: 14 },
+  knowledgeCard: { border: `1px solid ${color.borderSoft}`, borderRadius: 10, padding: 14, marginBottom: 10, background: "#FBFBFD" },
+  knowledgeCardHead: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 6 },
+  knowledgeTitle: { fontSize: 13.5, fontWeight: 600, color: color.ink, marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  knowledgePreview: { fontSize: 12.5, color: color.inkSoft, margin: 0, lineHeight: 1.5 },
+  sourceBadgeManual: { fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: color.borderSoft, color: color.inkSoft, textTransform: "uppercase", letterSpacing: "0.03em" },
+  sourceBadgeScraped: { fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: color.accentSoft, color: color.accentDeep, textTransform: "uppercase", letterSpacing: "0.03em" },
+
+  knowledgeAddGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, paddingTop: 12, borderTop: `1px solid ${color.borderSoft}` },
+  knowledgeAddCol: {},
+  knowledgeAddLabel: { fontSize: 12, color: color.inkSoft, fontWeight: 600, marginBottom: 8 },
+  knowledgeHint: { fontSize: 11, color: color.inkFaint, margin: "8px 0 0", lineHeight: 1.5 },
 
   primaryBtn: { background: color.accent, color: "#fff", border: "none", padding: "10px 18px", borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" },
   primaryBtnLg: { background: color.accentDeep, color: "#fff", border: "none", padding: "12px 26px", borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: "pointer" },
@@ -730,9 +771,7 @@ const s = {
   codeBox: { background: "#191830", borderRadius: 10, padding: 16, overflowX: "auto" },
   codeText: { color: "#A6E0BD", fontSize: 12.5, fontFamily: "'JetBrains Mono', monospace", whiteSpace: "pre" },
 
-  loadingWrap: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: color.bg, fontFamily: "'Inter', sans-serif" },
-  loadingCard: { textAlign: "center" },
-  loadingRow: { display: "flex", gap: 6, justifyContent: "center", marginBottom: 10 },
+  loadingRow: { display: "flex", gap: 6, marginTop: 100, justifyContent: "center" },
   loadingDot: { width: 8, height: 8, borderRadius: "50%", background: color.accent, display: "inline-block" },
-  loadingText: { color: color.inkSoft, fontSize: 13.5 },
+  loadingText: { color: color.inkSoft, fontSize: 13.5, textAlign: "center", marginTop: 10 },
 };

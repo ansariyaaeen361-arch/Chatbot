@@ -22,4 +22,16 @@ const upload = multer({
   }
 });
 
-module.exports = upload;
+const uploadLauncherMedia = multer({
+  storage: storage,
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB — covers a short intro video
+  fileFilter: function (req, file, cb) {
+    const allowedImages = ['.png', '.jpg', '.jpeg', '.svg', '.webp'];
+    const allowedVideos = ['.mp4', '.webm', '.mov'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowedImages.includes(ext) || allowedVideos.includes(ext)) cb(null, true);
+    else cb(new Error('Only image or video files are allowed'));
+  }
+});
+
+module.exports = { upload, uploadLauncherMedia };

@@ -9,13 +9,24 @@
   if (window.__mfWidgetLoaded) return; window.__mfWidgetLoaded = true;
 
   var STORAGE_KEY = "mf_widget_state_" + businessId;
-  var config = { name: "Chat", logoUrl: "", brandColor: "#1B1A18", ctaLinks: [] };
+
+  var widgetHost = document.createElement('div');
+  widgetHost.id = 'mf-widget-host';
+  document.body.appendChild(widgetHost);
+  var shadowRoot = widgetHost.attachShadow ? widgetHost.attachShadow({ mode: 'open' }) : widgetHost;
+
+  var config = { name: "Chat", logoUrl: "", brandColor: "#1B1A18", ctaLinks: [], launcherType: "default", launcherMediaUrl: "" };
   var busy = false;
   var socket = null;
   var currentAgentInitial = "R";
   var seenMsgIds = {};
 
   var state = loadState();
+
+  var BOT_ICON_SVG = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><path d="M12 2v3M8 21h8M9 8h6a3 3 0 013 3v3a3 3 0 01-3 3H9a3 3 0 01-3-3v-3a3 3 0 013-3z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.5" cy="12.5" r=".8" fill="currentColor"/><circle cx="14.5" cy="12.5" r=".8" fill="currentColor"/></svg>';
+  var HUMAN_ICON_SVG = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><path d="M4 13a8 8 0 0116 0v4a2 2 0 01-2 2h-1a1 1 0 01-1-1v-5a1 1 0 011-1h3M4 13v4a2 2 0 002 2h1a1 1 0 001-1v-5a1 1 0 00-1-1H4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var CLOSE_ICON_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>';
+  var DEFAULT_LAUNCH_SVG = '<svg viewBox="0 0 24 24" fill="none" width="26" height="26"><path d="M4 5h16v11H8l-4 4V5z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/></svg>';
 
   function loadState() {
     try {
@@ -39,26 +50,29 @@
   }
 
   function injectStyles() {
+    var side = config.launcherPosition === 'left' ? 'left' : 'right';
     var css =
-      '.mf2-launch{position:fixed;right:22px;bottom:22px;z-index:2147483000;width:60px;height:60px;border:none;border-radius:50%;' +
+      '.mf2-launch{position:fixed;' + side + ':22px;bottom:22px;z-index:2147483000;width:60px;height:60px;border:none;border-radius:50%;' +
       'background:' + config.brandColor + ';color:#fff;cursor:pointer;box-shadow:0 10px 30px -8px rgba(0,0,0,.4);display:grid;place-items:center;' +
-      'transition:transform .15s;font-family:inherit;}' +
-      '.mf2-launch:hover{transform:translateY(-2px);}' +
-      '.mf2-launch svg{width:26px;height:26px;}' +
+      'overflow:hidden;padding:0;transition:transform .15s ease, box-shadow .15s ease;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;}' +
+      '.mf2-launch:hover{transform:translateY(-2px);box-shadow:0 14px 34px -8px rgba(0,0,0,.45);}' +
+      '.mf2-launch-media{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;}' +
       '.mf2-dot{position:absolute;top:6px;right:6px;width:13px;height:13px;border-radius:50%;background:#E4571E;border:2px solid #fff;display:none;}' +
       '.mf2-dot.show{display:block;}' +
-      '.mf2-panel{position:fixed;right:22px;bottom:94px;z-index:2147483000;width:380px;max-width:calc(100vw - 32px);height:580px;' +
-      'max-height:calc(100vh - 130px);background:#fff;border:1px solid #E7E2D8;border-radius:18px;overflow:hidden;display:none;' +
-      'flex-direction:column;box-shadow:0 24px 60px -20px rgba(0,0,0,.35);' +
+      '.mf2-panel{position:fixed;' + side + ':22px;bottom:94px;z-index:2147483000;width:380px;max-width:calc(100vw - 32px);height:580px;' +
+      'max-height:calc(100vh - 130px);background:#fff;border:1px solid #E7E2D8;border-radius:18px;overflow:hidden;display:flex;' +
+      'flex-direction:column;box-shadow:0 24px 60px -20px rgba(0,0,0,.35);opacity:0;transform:translateY(14px) scale(.97);pointer-events:none;' +
+      'transition:opacity .16s ease, transform .16s ease;box-sizing:border-box;' +
       'font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#1B1A18;}' +
-      '.mf2-panel.open{display:flex;}' +
+      '.mf2-panel.open{opacity:1;transform:translateY(0) scale(1);pointer-events:auto;}' +
+      '.mf2-panel *{box-sizing:border-box;}' +
       '.mf2-head{background:' + config.brandColor + ';color:#fff;padding:14px 16px;display:flex;align-items:center;gap:10px;flex:0 0 auto;}' +
       '.mf2-head img{width:28px;height:28px;border-radius:50%;object-fit:cover;background:#fff;}' +
       '.mf2-title{font-weight:600;font-size:15px;}' +
-      '.mf2-x{background:none;border:none;color:#fff;cursor:pointer;font-size:20px;opacity:.8;}' +
-      '.mf2-x:hover{opacity:1;}' +
-      '.mf2-menu-btn{margin-left:auto;background:none;border:none;color:#fff;cursor:pointer;padding:4px;opacity:.85;display:grid;place-items:center;}' +
-      '.mf2-menu-btn:hover{opacity:1;}' +
+      '.mf2-x{background:none;border:none;color:#fff;cursor:pointer;opacity:.85;display:flex;align-items:center;justify-content:center;padding:6px;border-radius:8px;transition:background .12s ease,opacity .12s ease;}' +
+      '.mf2-x:hover{opacity:1;background:rgba(255,255,255,.15);}' +
+      '.mf2-menu-btn{margin-left:auto;background:none;border:none;color:#fff;cursor:pointer;padding:6px;opacity:.85;display:grid;place-items:center;border-radius:8px;transition:background .12s ease,opacity .12s ease;}' +
+      '.mf2-menu-btn:hover{opacity:1;background:rgba(255,255,255,.15);}' +
       '.mf2-menu-panel{position:absolute;inset:0;background:#fff;z-index:5;display:none;flex-direction:column;}' +
       '.mf2-menu-panel.open{display:flex;}' +
       '.mf2-menu-head{background:' + config.brandColor + ';color:#fff;padding:14px 16px;display:flex;align-items:center;gap:10px;flex:0 0 auto;}' +
@@ -72,10 +86,10 @@
       '.mf2-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;background:#FBFAF7;}' +
       '.mf2-row{display:flex;gap:8px;max-width:88%;align-items:flex-end;}' +
       '.mf2-row.user{align-self:flex-end;flex-direction:row-reverse;}' +
-      '.mf2-av{width:24px;height:24px;border-radius:7px;flex:0 0 auto;display:grid;place-items:center;font-size:11px;font-weight:700;background:#EFEFEF;color:#1B1A18;}' +
+      '.mf2-av{width:24px;height:24px;border-radius:7px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:#EFEFEF;color:#6E6A63;}' +
       '.mf2-av.rep{background:' + config.brandColor + ';color:#fff;}' +
       '.mf2-bub{padding:10px 13px;border-radius:12px;font-size:14px;line-height:1.5;white-space:pre-wrap;}' +
-      '.mf2-bub.bot{background:#fff;border:1px solid #E7E2D8;border-top-left-radius:4px;}' +
+      '.mf2-bub.bot{background:#fff;border:1px solid #E7E2D8;border-top-left-radius:4px;box-shadow:0 1px 2px rgba(0,0,0,.03);}' +
       '.mf2-bub.user{background:' + config.brandColor + ';color:#fff;border-top-right-radius:4px;}' +
       '.mf2-bub.rep{background:#fff;border:1px solid ' + config.brandColor + ';border-top-left-radius:4px;}' +
       '.mf2-bub.system{background:#F2F2F2;color:#6E6A63;font-size:12px;border-radius:9px;}' +
@@ -83,27 +97,47 @@
       'font-size:13px;font-weight:600;padding:8px 13px;border-radius:9px;}' +
       '.mf2-foot{border-top:1px solid #E7E2D8;padding:10px 12px;background:#fff;flex:0 0 auto;}' +
       '.mf2-inrow{display:flex;gap:8px;}' +
-      '.mf2-input{flex:1;resize:none;border:1px solid #E7E2D8;border-radius:11px;padding:10px 12px;font-size:14px;font-family:inherit;outline:none;max-height:100px;}' +
-      '.mf2-send{width:40px;height:40px;border:none;border-radius:11px;background:' + config.brandColor + ';color:#fff;cursor:pointer;display:grid;place-items:center;}' +
+      '.mf2-input{flex:1;resize:none;border:1px solid #E7E2D8;border-radius:11px;padding:10px 12px;font-size:14px;font-family:inherit;outline:none;max-height:100px;transition:border-color .15s ease;}' +
+      '.mf2-input:focus{border-color:#B9B4A8;}' +
+      '.mf2-send{width:40px;height:40px;border:none;border-radius:11px;background:' + config.brandColor + ';color:#fff;cursor:pointer;display:grid;place-items:center;transition:opacity .12s ease;}' +
+      '.mf2-send:hover{opacity:.9;}' +
       '.mf2-human-row{text-align:right;margin-top:6px;}' +
-      '.mf2-human{background:none;border:none;color:#6E6A63;text-decoration:underline;cursor:pointer;font-size:11.5px;font-family:inherit;padding:0;}' +
+      '.mf2-human{background:none;border:none;color:#6E6A63;cursor:pointer;font-size:11.5px;font-family:inherit;padding:0;display:inline-flex;align-items:center;gap:5px;}' +
+      '.mf2-human span{text-decoration:underline;}' +
+      '.mf2-human:hover{color:#1B1A18;}' +
       '.mf2-lead{background:#fff;border:1px solid #E7E2D8;border-radius:12px;padding:13px;font-size:13.5px;width:100%;}' +
-      '.mf2-lead input{width:100%;box-sizing:border-box;border:1px solid #E7E2D8;border-radius:8px;padding:8px 10px;font-size:13.5px;margin-bottom:8px;font-family:inherit;}' +
-      '.mf2-lead button{width:100%;border:none;background:' + config.brandColor + ';color:#fff;font-weight:600;padding:9px;border-radius:8px;cursor:pointer;}' +
+      '.mf2-lead input{width:100%;box-sizing:border-box;border:1px solid #E7E2D8;border-radius:8px;padding:8px 10px;font-size:13.5px;margin-bottom:8px;font-family:inherit;transition:border-color .15s ease;}' +
+      '.mf2-lead input:focus{outline:none;border-color:#B9B4A8;}' +
+      '.mf2-lead button{width:100%;border:none;background:' + config.brandColor + ';color:#fff;font-weight:600;padding:9px;border-radius:8px;cursor:pointer;transition:opacity .12s ease;}' +
+      '.mf2-lead button:hover{opacity:.9;}' +
       '.mf2-skip{display:block;text-align:center;margin-top:6px;font-size:11.5px;color:#999;cursor:pointer;text-decoration:underline;}' +
-      '.mf2-err{color:#B8410F;font-size:12px;margin:-3px 0 8px;}';
+      '.mf2-err{color:#B8410F;font-size:12px;margin:-3px 0 8px;}' +
+      '.mf2-branding{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 10px;border-top:1px solid #EFEFEF;background:#FBFBFB;font-size:11px;color:#9A9A9A;text-decoration:none;flex:0 0 auto;font-family:inherit;}' +
+      '.mf2-branding:hover{color:#6E6A63;}' +
+      '.mf2-branding-mark{width:14px;height:14px;border-radius:4px;background:#5B5BD6;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex:0 0 auto;}';
 
     var style = document.createElement("style");
     style.textContent = css;
-    document.head.appendChild(style);
+    shadowRoot.appendChild(style);
   }
 
   var body, input, sendBtn, panel, dot, humanBtn, menuBtn, menuPanel, menuBack, downloadBtn, leaveBtn;
 
+  function buildLauncherInner() {
+    if (config.launcherType === 'image' && config.launcherMediaUrl) {
+      return '<img class="mf2-launch-media" src="' + API_ROOT + config.launcherMediaUrl + '" alt="">';
+    }
+    if (config.launcherType === 'video' && config.launcherMediaUrl) {
+      return '<video class="mf2-launch-media" src="' + API_ROOT + config.launcherMediaUrl + '" autoplay muted loop playsinline></video>';
+    }
+    return DEFAULT_LAUNCH_SVG;
+  }
+
   function buildDOM() {
     var launch = document.createElement('button');
     launch.className = 'mf2-launch';
-    launch.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M4 5h16v11H8l-4 4V5z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/></svg><span class="mf2-dot" id="mf2Dot"></span>';
+    launch.setAttribute('aria-label', 'Open chat');
+    launch.innerHTML = buildLauncherInner() + '<span class="mf2-dot" id="mf2Dot"></span>';
 
     panel = document.createElement('div');
     panel.className = 'mf2-panel';
@@ -112,7 +146,7 @@
         (config.logoUrl ? '<img src="' + API_ROOT + config.logoUrl + '">' : '') +
         '<div class="mf2-title">' + escapeHtml(config.name) + '</div>' +
         '<button class="mf2-menu-btn" id="mf2MenuBtn" aria-label="More options"><svg viewBox="0 0 24 24" fill="none" width="20" height="20"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>' +
-        '<button class="mf2-x" aria-label="Close">&times;</button>' +
+        '<button class="mf2-x" aria-label="Close">' + CLOSE_ICON_SVG + '</button>' +
       '</div>' +
       '<div class="mf2-body" id="mf2Body"></div>' +
       '<div class="mf2-menu-panel" id="mf2MenuPanel">' +
@@ -124,14 +158,17 @@
       '</div>' +
       '<div class="mf2-foot">' +
         '<div class="mf2-inrow">' +
-          '<textarea class="mf2-input" id="mf2Input" rows="1" placeholder="Type a message…"></textarea>' +
+          '<textarea class="mf2-input" id="mf2Input" rows="1" placeholder="Type a message…" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false"></textarea>' +
           '<button class="mf2-send" id="mf2Send"><svg viewBox="0 0 20 20" fill="none" width="18" height="18"><path d="M3 10l14-6-6 14-2-6-6-2z" fill="currentColor"/></svg></button>' +
         '</div>' +
-        '<div class="mf2-human-row"><button class="mf2-human" id="mf2Human">Talk to a Representative →</button></div>' +
-      '</div>';
+        '<div class="mf2-human-row"><button class="mf2-human" id="mf2Human">' + HUMAN_ICON_SVG + '<span>Talk to a Representative →</span></button></div>' +
+      '</div>' +
+      '<a class="mf2-branding" href="https://mentalforge.ai" target="_blank" rel="noopener">' +
+        '<span class="mf2-branding-mark">M</span>Powered by MentalForge AI' +
+      '</a>';
 
-    document.body.appendChild(launch);
-    document.body.appendChild(panel);
+    shadowRoot.appendChild(launch);
+    shadowRoot.appendChild(panel);
 
     body = panel.querySelector('#mf2Body');
     input = panel.querySelector('#mf2Input');
@@ -187,7 +224,13 @@
     if (role !== 'system') {
       var av = document.createElement('div');
       av.className = 'mf2-av' + (role === 'rep' ? ' rep' : '');
-      av.textContent = role === 'user' ? 'You' : (role === 'rep' ? currentAgentInitial : '●');
+      if (role === 'user') {
+        av.textContent = 'You';
+      } else if (role === 'rep') {
+        av.textContent = currentAgentInitial;
+      } else {
+        av.innerHTML = BOT_ICON_SVG;
+      }
       row.appendChild(av);
     }
 
@@ -221,8 +264,8 @@
     card.innerHTML =
       '<div style="font-weight:600;margin-bottom:6px;">Hi! Who am I speaking with?</div>' +
       (pendingLivePurpose ? '<div style="font-size:12px;color:#6E6A63;margin-bottom:8px;">So our team can follow up with you directly.</div>' : '') +
-      '<input type="text" id="mf2Name" placeholder="Your name">' +
-      '<input type="text" id="mf2Contact" placeholder="Email or phone">' +
+      '<input type="text" id="mf2Name" placeholder="Your name" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false">' +
+      '<input type="text" id="mf2Contact" placeholder="Email or phone" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false">' +
       '<div class="mf2-err" id="mf2Err" style="display:none;"></div>' +
       '<button id="mf2LeadBtn">Continue</button>' +
       (pendingLivePurpose ? '' : '<span class="mf2-skip" id="mf2Skip">Skip for now</span>');
@@ -270,7 +313,7 @@
   }
 
   function startChat() {
-    var greeting = "Hi! How can I help you today?";
+    var greeting = config.welcomeMessage || "Hi! How can I help you today?";
     addBubble('assistant', greeting, null, null, true);
     state.messages.push({ role: 'assistant', content: greeting });
     saveState();
@@ -348,7 +391,7 @@
     socket = null;
     body.innerHTML = '';
     menuPanel.classList.remove('open');
-    humanBtn.style.display = 'inline';
+    humanBtn.style.display = 'inline-flex';
     humanBtn.disabled = false;
     resumeOrStart();
   }
@@ -417,7 +460,7 @@
           state.messages.push({ role: 'system', content: msg });
           state.liveMode = false;
           saveState();
-          humanBtn.style.display = 'inline';
+          humanBtn.style.display = 'inline-flex';
           humanBtn.disabled = false;
         }
       });

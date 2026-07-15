@@ -5,7 +5,7 @@ const Lead = require('../models/Lead');
 exports.getPublicConfig = async (req, res) => {
   try {
     const business = await Business.findById(req.params.businessId)
-      .select('name logoUrl brandColor ctaLinks');
+      .select('name logoUrl brandColor ctaLinks launcherType launcherMediaUrl welcomeMessage launcherPosition');
     if (!business) return res.status(404).json({ error: 'Business not found' });
     res.json(business);
   } catch (err) {
