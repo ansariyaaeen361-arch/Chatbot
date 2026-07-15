@@ -99,9 +99,6 @@ exports.addKnowledgeEntry = async (req, res) => {
   try {
     const business = await Business.findById(req.user.businessId);
     if (!business) return res.status(404).json({ error: 'Business not found' });
-    if (business.plan === 'trial') {
-      return res.status(403).json({ error: 'The knowledge base is available on Basic and Pro plans. Please upgrade to add entries.' });
-    }
     const { title, content } = req.body;
     if (!content || !content.trim()) {
       return res.status(400).json({ error: 'Content is required' });
