@@ -3,7 +3,7 @@
   var businessId = scriptTag.getAttribute('data-business');
   if (!businessId) { console.error('Chat widget: data-business attribute missing'); return; }
 
-  var API_ROOT = "http://localhost:5000"; // change to real domain when deployed
+  var API_ROOT = "https://api.mentalforge.ai";
   var API_BASE = API_ROOT + "/api";
 
   if (window.__mfWidgetLoaded) return; window.__mfWidgetLoaded = true;
