@@ -5,18 +5,23 @@ import Sidebar from "../components/Sidebar";
 import { color, layout, globalStyles } from "../theme";
 
 const PLANS = [
-  { id: "starter", name: "Starter", price: "$25", period: "/month", popular: false,
+  { id: "starter", name: "Starter", monthlyPrice: 25, yearlyPrice: 250, popular: false,
     features: ["FAQ + AI chat widget", "Knowledge base", "Full branding customization", "Lead capture", "Up to $20/mo AI usage", "1 team member"] },
-  { id: "basic", name: "Growth", price: "$29", period: "/month", popular: true,
+  { id: "basic", name: "Growth", monthlyPrice: 60, yearlyPrice: 650, popular: true,
     features: ["Everything in Starter", "Live agent handoff", "Analytics dashboard", "Team management + transfer", "Up to $20/mo AI usage", "5 team members"] },
-  { id: "pro", name: "Pro", price: "$79", period: "/month", popular: false,
+  { id: "pro", name: "Pro", monthlyPrice: 199, yearlyPrice: 2000, popular: false,
     features: ["Everything in Growth", "Up to $100/mo AI usage", "10 team members"] }
 ];
+
+function yearlySavingsPct(p) {
+  return Math.round(((p.monthlyPrice * 12 - p.yearlyPrice) / (p.monthlyPrice * 12)) * 100);
+}
 
 export default function Billing() {
   const [status, setStatus] = useState(null);
   const [loadingPlan, setLoadingPlan] = useState(null);
   const [msg, setMsg] = useState("");
+  const [billingCycle, setBillingCycle] = useState("monthly");
 
   useEffect(() => {
     loadStatus();
@@ -39,7 +44,7 @@ export default function Billing() {
   async function subscribe(planId) {
     setLoadingPlan(planId);
     try {
-      const res = await api.post("/billing/subscribe", { plan: planId });
+      const res = await api.post("/billing/subscribe", { plan: planId, billingCycle });
       window.location.href = res.data.approveUrl;
     } catch (err) {
       setMsg(err.response?.data?.error || "Could not start checkout");
@@ -94,9 +99,28 @@ export default function Billing() {
 
         {msg && <div style={s.toast}>{msg}</div>}
 
+        <div style={s.cycleToggle}>
+          <button
+            className="forge-ghost"
+            style={{ ...s.cycleBtn, ...(billingCycle === "monthly" ? s.cycleBtnActive : {}) }}
+            onClick={() => setBillingCycle("monthly")}
+          >
+            Monthly
+          </button>
+          <button
+            className="forge-ghost"
+            style={{ ...s.cycleBtn, ...(billingCycle === "yearly" ? s.cycleBtnActive : {}) }}
+            onClick={() => setBillingCycle("yearly")}
+          >
+            Yearly <span style={s.saveBadge}>Save up to 17%</span>
+          </button>
+        </div>
+
         <div style={s.plansGrid}>
           {PLANS.map((p) => {
             const isCurrent = status.plan === p.id && status.planStatus === "active";
+            const price = billingCycle === "yearly" ? p.yearlyPrice : p.monthlyPrice;
+            const period = billingCycle === "yearly" ? "/year" : "/month";
             return (
               <div
                 key={p.id}
@@ -106,7 +130,10 @@ export default function Billing() {
               >
                 {p.popular && <div style={s.popularBadge}>Most popular</div>}
                 <div style={s.planName}>{p.name}</div>
-                <div style={s.planPrice}>{p.price}<span style={s.planPeriod}>{p.period}</span></div>
+                <div style={s.planPrice}>${price}<span style={s.planPeriod}>{period}</span></div>
+                {billingCycle === "yearly" && (
+                  <div style={s.savingsText}>Save {yearlySavingsPct(p)}% vs monthly</div>
+                )}
                 <ul style={s.featureList}>
                   {p.features.map((f, i) => (
                     <li key={i} style={s.featureItem}>
@@ -172,6 +199,12 @@ const s = {
   planName: { fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: color.inkSoft },
   planPrice: { fontSize: 32, fontWeight: 700, margin: "8px 0 18px", fontFamily: "'Space Grotesk', sans-serif", color: color.ink },
   planPeriod: { fontSize: 13, fontWeight: 400, color: color.inkSoft },
+  savingsText: { fontSize: 11.5, color: color.successText, fontWeight: 600, marginTop: -14, marginBottom: 14 },
+
+  cycleToggle: { display: "inline-flex", background: color.borderSoft, borderRadius: 10, padding: 4, gap: 4, marginTop: 20, marginBottom: 8 },
+  cycleBtn: { border: "none", background: "none", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, color: color.inkSoft, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 },
+  cycleBtnActive: { background: color.surface, color: color.ink, boxShadow: "0 1px 4px rgba(26,27,46,.08)" },
+  saveBadge: { fontSize: 10, fontWeight: 700, color: color.successText, background: color.successSoft, padding: "2px 7px", borderRadius: 999 },
   featureList: { listStyle: "none", padding: 0, margin: "0 0 20px", display: "flex", flexDirection: "column", gap: 10 },
   featureItem: { display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: color.ink },
   checkIcon: { color: color.accent, flex: "0 0 auto" },

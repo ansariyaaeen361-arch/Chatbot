@@ -123,39 +123,52 @@ export default function LiveChat() {
       <Sidebar />
 
       <div style={s.listPanel}>
-        <div style={s.tabs}>
-          <button style={tab === 'waiting' ? s.tabActive : s.tab} onClick={() => setTab('waiting')}>Waiting ({waiting.length})</button>
-          <button style={tab === 'active' ? s.tabActive : s.tab} onClick={() => setTab('active')}>Active ({active.length})</button>
-          <button style={tab === 'closed' ? s.tabActive : s.tab} onClick={() => setTab('closed')}>Closed ({closed.length})</button>
+        <div style={s.tabsWrap}>
+          <div style={s.tabs}>
+            <button style={{ ...s.tab, ...(tab === 'waiting' ? s.tabActive : {}) }} onClick={() => setTab('waiting')}>Waiting ({waiting.length})</button>
+            <button style={{ ...s.tab, ...(tab === 'active' ? s.tabActive : {}) }} onClick={() => setTab('active')}>Active ({active.length})</button>
+            <button style={{ ...s.tab, ...(tab === 'closed' ? s.tabActive : {}) }} onClick={() => setTab('closed')}>Closed ({closed.length})</button>
+          </div>
         </div>
         <div style={s.list}>
           {list.length === 0 && <div style={s.empty}>Nothing here.</div>}
           {list.map(chat => (
-            <div key={chat._id} style={selectedChat?._id === chat._id ? { ...s.item, ...s.itemActive } : s.item} onClick={() => openChat(chat)}>
-              <div style={s.itemName}>{chat.visitorName}</div>
-              <div style={s.itemContact}>{chat.visitorEmail || chat.visitorPhone || 'no contact'}</div>
-              {isAdmin && chat.assignedToName && <div style={s.itemAgent}>Agent: {chat.assignedToName}</div>}
-              {tab === 'waiting' && (
-                <button style={s.acceptBtn} onClick={(e) => { e.stopPropagation(); acceptChat(chat._id); }}>
-                  Accept chat
-                </button>
-              )}
+            <div
+              key={chat._id}
+              className="forge-ghost"
+              style={selectedChat?._id === chat._id ? { ...s.item, ...s.itemActive } : s.item}
+              onClick={() => openChat(chat)}
+            >
+              <div style={s.itemAvatar}>{(chat.visitorName || '?').charAt(0).toUpperCase()}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={s.itemName}>{chat.visitorName}</div>
+                <div style={s.itemContact}>{chat.visitorEmail || chat.visitorPhone || 'No contact info'}</div>
+                {isAdmin && chat.assignedToName && <div style={s.itemAgent}>Agent: {chat.assignedToName}</div>}
+                {tab === 'waiting' && (
+                  <button className="forge-btn-primary" style={s.acceptBtn} onClick={(e) => { e.stopPropagation(); acceptChat(chat._id); }}>
+                    Accept chat
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>
       </div>
 
       <div style={s.chatPanel}>
-        {!selectedChat && <div style={s.noChat}>Select a chat to view</div>}
+        {!selectedChat && <div style={s.noChat}>Select a chat from the list to view the conversation</div>}
         {selectedChat && (
           <>
             <div style={s.chatHead}>
-              <div>
-                <div style={s.chatHeadName}>{selectedChat.visitorName}</div>
-                <div style={s.chatHeadContact}>{selectedChat.visitorEmail || selectedChat.visitorPhone}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={s.chatHeadAvatar}>{(selectedChat.visitorName || '?').charAt(0).toUpperCase()}</div>
+                <div>
+                  <div style={s.chatHeadName}>{selectedChat.visitorName}</div>
+                  <div style={s.chatHeadContact}>{selectedChat.visitorEmail || selectedChat.visitorPhone}</div>
+                </div>
               </div>
               {selectedChat.status === 'active' && (
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                   <select className="forge-input" style={s.transferSelect} onChange={(e) => {
                     const [id, name] = e.target.value.split('|');
                     if (id) transferChat(id, name);
@@ -172,7 +185,7 @@ export default function LiveChat() {
             <div style={s.chatBody} ref={bodyRef}>
               {messages.map((m, i) => (
                 <div key={i} style={{ ...s.msgRow, alignSelf: m.sender === 'rep' ? 'flex-end' : 'flex-start' }}>
-                  {m.sender !== 'system' && <div style={s.msgLabel}>{m.sender === 'rep' ? (m.repName || 'You') : 'Visitor'}</div>}
+                  {m.sender !== 'system' && <div style={{ ...s.msgLabel, textAlign: m.sender === 'rep' ? 'right' : 'left' }}>{m.sender === 'rep' ? (m.repName || 'You') : 'Visitor'}</div>}
                   <div style={
                     m.sender === 'rep' ? s.msgBubRep :
                     m.sender === 'system' ? s.msgBubSystem :
@@ -198,35 +211,38 @@ export default function LiveChat() {
 const s = {
   wrap: { display: 'flex', height: '100vh', fontFamily: "'Inter', 'Segoe UI', sans-serif", background: color.bg, color: color.ink },
 
-  listPanel: { width: 320, flex: '0 0 auto', borderRight: `1px solid ${color.border}`, background: color.surface, display: 'flex', flexDirection: 'column' },
-  tabs: { display: 'flex', borderBottom: `1px solid ${color.border}` },
-  tab: { flex: 1, padding: 12, border: 'none', background: color.surface, color: color.inkSoft, cursor: 'pointer', fontSize: 12.5, fontWeight: 600 },
-  tabActive: { flex: 1, padding: 12, border: 'none', background: color.accent, color: '#fff', cursor: 'pointer', fontSize: 12.5, fontWeight: 600 },
+  listPanel: { width: 340, flex: '0 0 auto', borderRight: `1px solid ${color.border}`, background: color.surface, display: 'flex', flexDirection: 'column' },
+  tabsWrap: { padding: 14, borderBottom: `1px solid ${color.border}` },
+  tabs: { display: 'flex', background: color.bg, borderRadius: 10, padding: 4, gap: 4 },
+  tab: { flex: 1, border: 'none', background: 'none', padding: '9px 8px', borderRadius: 8, color: color.inkSoft, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: "'JetBrains Mono', monospace", transition: 'background .15s ease, color .15s ease' },
+  tabActive: { background: color.surface, color: color.ink, boxShadow: '0 1px 4px rgba(26,27,46,.10)' },
   list: { flex: 1, overflowY: 'auto' },
-  empty: { padding: 16, fontSize: 12.5, color: color.inkFaint },
-  item: { padding: 12, borderBottom: `1px solid ${color.borderSoft}`, cursor: 'pointer' },
+  empty: { padding: 24, fontSize: 12.5, color: color.inkFaint, textAlign: 'center' },
+  item: { padding: '14px 16px', borderBottom: `1px solid ${color.borderSoft}`, cursor: 'pointer', display: 'flex', gap: 12, alignItems: 'flex-start' },
   itemActive: { background: color.accentSoft },
-  itemName: { fontWeight: 600, fontSize: 13.5, color: color.ink },
-  itemContact: { fontSize: 12, color: color.inkSoft },
-  itemAgent: { fontSize: 11, color: color.inkFaint, marginTop: 2 },
-  acceptBtn: { marginTop: 6, width: '100%', background: color.accent, color: '#fff', border: 'none', padding: 7, borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 600 },
+  itemAvatar: { width: 36, height: 36, borderRadius: '50%', background: color.accentSoft, color: color.accentDeep, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13.5, flex: '0 0 auto', fontFamily: "'Space Grotesk', sans-serif" },
+  itemName: { fontWeight: 600, fontSize: 13.5, color: color.ink, fontFamily: "'Space Grotesk', sans-serif" },
+  itemContact: { fontSize: 12, color: color.inkSoft, marginTop: 1 },
+  itemAgent: { fontSize: 11, color: color.inkFaint, marginTop: 3 },
+  acceptBtn: { marginTop: 8, width: '100%', background: color.accent, color: '#fff', border: 'none', padding: 8, borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600 },
 
   chatPanel: { flex: 1, display: 'flex', flexDirection: 'column', background: color.bg },
-  noChat: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: color.inkFaint, fontSize: 13.5 },
-  chatHead: { padding: 14, borderBottom: `1px solid ${color.border}`, background: color.surface, display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  chatHeadName: { fontWeight: 600, fontSize: 14, color: color.ink },
-  chatHeadContact: { fontSize: 12, color: color.inkSoft },
-  transferSelect: { width: 150 },
-  closeBtn: { background: color.borderSoft, border: 'none', padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 12.5, fontWeight: 600, color: color.ink },
+  noChat: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: color.inkFaint, fontSize: 13.5, padding: '0 40px', textAlign: 'center' },
+  chatHead: { padding: '16px 22px', borderBottom: `1px solid ${color.border}`, background: color.surface, display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  chatHeadAvatar: { width: 38, height: 38, borderRadius: '50%', background: color.accentSoft, color: color.accentDeep, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, flex: '0 0 auto', fontFamily: "'Space Grotesk', sans-serif" },
+  chatHeadName: { fontWeight: 700, fontSize: 15, color: color.ink, fontFamily: "'Space Grotesk', sans-serif" },
+  chatHeadContact: { fontSize: 12, color: color.inkSoft, marginTop: 1 },
+  transferSelect: { width: 170, boxSizing: 'border-box', padding: '9px 12px', border: `1px solid ${color.border}`, borderRadius: 9, fontSize: 12.5, fontFamily: 'inherit', background: '#FBFBFD', color: color.ink, cursor: 'pointer' },
+  closeBtn: { background: color.borderSoft, border: 'none', padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontSize: 12.5, fontWeight: 600, color: color.danger },
 
-  chatBody: { flex: 1, overflowY: 'auto', padding: 20, display: 'flex', flexDirection: 'column', gap: 12 },
-  msgRow: { display: 'flex', flexDirection: 'column', maxWidth: '68%' },
-  msgLabel: { fontSize: 10.5, color: color.inkFaint, marginBottom: 3 },
-  msgBubRep: { padding: '10px 14px', borderRadius: 12, fontSize: 13.5, background: color.accent, color: '#fff' },
-  msgBubVisitor: { padding: '10px 14px', borderRadius: 12, fontSize: 13.5, background: color.surface, color: color.ink, border: `1px solid ${color.border}` },
-  msgBubSystem: { padding: '10px 14px', borderRadius: 12, fontSize: 13.5, background: color.borderSoft, color: color.inkSoft },
+  chatBody: { flex: 1, overflowY: 'auto', padding: 22, display: 'flex', flexDirection: 'column', gap: 14, background: color.bg },
+  msgRow: { display: 'flex', flexDirection: 'column', maxWidth: '65%' },
+  msgLabel: { fontSize: 10.5, color: color.inkFaint, marginBottom: 4, fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.02em' },
+  msgBubRep: { padding: '11px 15px', borderRadius: 14, borderTopRightRadius: 4, fontSize: 13.5, lineHeight: 1.5, background: color.accent, color: '#fff', boxShadow: '0 2px 8px rgba(91,91,214,.20)' },
+  msgBubVisitor: { padding: '11px 15px', borderRadius: 14, borderTopLeftRadius: 4, fontSize: 13.5, lineHeight: 1.5, background: color.surface, color: color.ink, border: `1px solid ${color.border}`, boxShadow: '0 1px 3px rgba(26,27,46,.04)' },
+  msgBubSystem: { padding: '9px 14px', borderRadius: 10, fontSize: 12, background: color.borderSoft, color: color.inkSoft },
 
-  inputRow: { borderTop: `1px solid ${color.border}`, padding: 14, background: color.surface, display: 'flex', gap: 10 },
-  input: { flex: 1 },
-  sendBtn: { padding: '0 22px', fontWeight: 600, borderRadius: 9, minHeight: 40 },
+  inputRow: { borderTop: `1px solid ${color.border}`, padding: 16, background: color.surface, display: 'flex', gap: 10 },
+  input: { flex: 1, boxSizing: 'border-box', height: 42, padding: '0 14px', border: `1px solid ${color.border}`, borderRadius: 10, fontSize: 13.5, fontFamily: 'inherit', background: '#FBFBFD', color: color.ink },
+  sendBtn: { boxSizing: 'border-box', height: 42, padding: '0 24px', fontWeight: 600, borderRadius: 10, fontSize: 13.5, background: color.accent, color: '#fff', border: 'none', cursor: 'pointer' },
 };

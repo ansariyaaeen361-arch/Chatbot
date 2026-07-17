@@ -3,22 +3,23 @@ const Business = require('../models/Business');
 const { getPlanConfig } = require('../utils/planConfig');
 
 const PLAN_MAP = {
-  starter: process.env.PAYPAL_STARTER_PLAN_ID,
-  basic: process.env.PAYPAL_BASIC_PLAN_ID,
-  pro: process.env.PAYPAL_PRO_PLAN_ID
+  starter: { monthly: process.env.PAYPAL_STARTER_PLAN_ID, yearly: process.env.PAYPAL_STARTER_YEARLY_PLAN_ID },
+  basic: { monthly: process.env.PAYPAL_BASIC_PLAN_ID, yearly: process.env.PAYPAL_BASIC_YEARLY_PLAN_ID },
+  pro: { monthly: process.env.PAYPAL_PRO_PLAN_ID, yearly: process.env.PAYPAL_PRO_YEARLY_PLAN_ID }
 };
 
 function planFromPlanId(planId) {
-  if (planId === process.env.PAYPAL_PRO_PLAN_ID) return 'pro';
-  if (planId === process.env.PAYPAL_BASIC_PLAN_ID) return 'basic';
-  if (planId === process.env.PAYPAL_STARTER_PLAN_ID) return 'starter';
+  for (const [plan, cycles] of Object.entries(PLAN_MAP)) {
+    if (planId === cycles.monthly || planId === cycles.yearly) return plan;
+  }
   return 'trial';
 }
 
 exports.createSubscription = async (req, res) => {
   try {
-    const { plan } = req.body;
-    const planId = PLAN_MAP[plan];
+    const { plan, billingCycle } = req.body;
+    const cycle = billingCycle === 'yearly' ? 'yearly' : 'monthly';
+    const planId = PLAN_MAP[plan] && PLAN_MAP[plan][cycle];
     if (!planId) return res.status(400).json({ error: 'Invalid plan selected' });
 
     const business = await Business.findById(req.user.businessId);
