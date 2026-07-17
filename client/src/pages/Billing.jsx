@@ -5,10 +5,12 @@ import Sidebar from "../components/Sidebar";
 import { color, layout, globalStyles } from "../theme";
 
 const PLANS = [
-  { id: "basic", name: "Basic", price: "$29", period: "/month", popular: false,
-    features: ["AI + FAQ chat widget", "Lead capture", "Up to $20/mo AI usage", "1 team member"] },
-  { id: "pro", name: "Pro", price: "$79", period: "/month", popular: true,
-    features: ["Everything in Basic", "Live agent handoff", "Team management + transfer", "Up to $100/mo AI usage", "Analytics dashboard"] }
+  { id: "starter", name: "Starter", price: "$25", period: "/month", popular: false,
+    features: ["FAQ + AI chat widget", "Knowledge base", "Full branding customization", "Lead capture", "Up to $20/mo AI usage", "1 team member"] },
+  { id: "basic", name: "Growth", price: "$29", period: "/month", popular: true,
+    features: ["Everything in Starter", "Live agent handoff", "Analytics dashboard", "Team management + transfer", "Up to $20/mo AI usage", "5 team members"] },
+  { id: "pro", name: "Pro", price: "$79", period: "/month", popular: false,
+    features: ["Everything in Growth", "Up to $100/mo AI usage", "10 team members"] }
 ];
 
 export default function Billing() {
@@ -61,7 +63,7 @@ export default function Billing() {
       <div style={layout.shell} className="forge-shell">
         <style>{globalStyles}</style>
         <Sidebar />
-        <main style={layout.main(720)} className="forge-main">
+        <main style={layout.main(900)} className="forge-main">
           <div style={s.loadingRow}>
             <span className="forge-dot" style={{ ...s.loadingDot, animationDelay: "0s" }} />
             <span className="forge-dot" style={{ ...s.loadingDot, animationDelay: ".2s" }} />
@@ -80,7 +82,7 @@ export default function Billing() {
       <style>{globalStyles}</style>
       <Sidebar />
 
-      <main style={layout.main(720)} className="forge-main">
+      <main style={layout.main(900)} className="forge-main">
         <header style={s.header}>
           <div style={s.eyebrow}>Workspace</div>
           <h1 style={s.title}>Billing</h1>
@@ -163,7 +165,7 @@ const s = {
   statusInactive: { background: color.borderSoft, color: color.inkSoft },
   toast: { background: color.successSoft, color: color.successText, padding: "10px 14px", borderRadius: 9, fontSize: 12.5, marginBottom: 18, fontWeight: 600 },
 
-  plansGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginBottom: 16, marginTop: 20 },
+  plansGrid: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 18, marginBottom: 16, marginTop: 20 },
   planCard: { position: "relative", background: color.surface, border: `1px solid ${color.border}`, borderRadius: 16, padding: "26px 24px 24px" },
   planCardPopular: { border: `2px solid ${color.accent}`, boxShadow: "0 8px 24px rgba(91,91,214,.12)" },
   popularBadge: { position: "absolute", top: -12, left: 24, background: color.accent, color: "#fff", fontSize: 10.5, fontWeight: 700, padding: "4px 12px", borderRadius: 999, letterSpacing: "0.03em" },

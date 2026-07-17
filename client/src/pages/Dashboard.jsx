@@ -103,6 +103,7 @@ export default function Dashboard() {
         ctaLinks: business.ctaLinks,
         welcomeMessage: business.welcomeMessage,
         launcherPosition: business.launcherPosition,
+        hideBranding: business.hideBranding,
       };
       const res = await api.put("/business/me", payload);
       setBusiness(res.data);
@@ -252,7 +253,7 @@ export default function Dashboard() {
   const faqsCount = (business.faqs || []).filter((f) => f.question && f.answer).length;
   const ctaCount = (business.ctaLinks || []).filter((c) => c.label && c.url).length;
   const knowledgeCount = (business.knowledgeBase || []).length;
-  const isTrial = business.plan === "trial";
+  const canRemoveBranding = !["trial", "starter"].includes(business.plan);
 
   return (
     <div style={layout.shell} className="forge-shell">
@@ -369,7 +370,7 @@ export default function Dashboard() {
                       : <span style={s.logoPlaceholder}>{initial}</span>}
                   </div>
                   <label className="forge-ghost" style={s.uploadBtn}>
-                     Upload image/video
+                     Upload
                     <input type="file" accept="image/*" onChange={uploadLogo} style={{ display: "none" }} />
                   </label>
                 </div>
@@ -393,6 +394,29 @@ export default function Dashboard() {
                 ))}
               </div>
               <button className="forge-ghost" style={s.ghostBtn} onClick={addCta}>+ Add link</button>
+            </Field>
+
+            <Field label='"Powered by MentalForge AI" badge'>
+              {canRemoveBranding ? (
+                <label style={s.toggleRow}>
+                  <span className="forge-toggle">
+                    <input
+                      type="checkbox"
+                      checked={!business.hideBranding}
+                      onChange={(e) => updateField("hideBranding", !e.target.checked)}
+                    />
+                    <span className="forge-toggle-track" />
+                  </span>
+                  <span style={s.toggleLabel}>
+                    {business.hideBranding ? "Hidden from your widget" : "Shown on your widget"}
+                  </span>
+                </label>
+              ) : (
+                <div style={s.toggleRow}>
+                  <span style={s.toggleLabel}>Shown on your widget</span>
+                  <Link to="/billing" style={s.upgradeLink}>Available on Growth and Pro plans — Upgrade →</Link>
+                </div>
+              )}
             </Field>
 
             <Field label="Welcome message">
@@ -430,7 +454,7 @@ export default function Dashboard() {
                     )}
                   </div>
                   <label className="forge-ghost" style={s.uploadBtn}>
-                    Upload
+                    Upload image / video
                     <input type="file" accept="image/*,video/*" onChange={uploadLauncherMedia} style={{ display: "none" }} />
                   </label>
                 </div>
@@ -739,6 +763,9 @@ const s = {
   colorRow: { display: "flex", alignItems: "center", gap: 10 },
   colorSwatch: { width: 44, height: 40, border: `1px solid ${color.border}`, borderRadius: 8, cursor: "pointer", padding: 2, background: "#fff" },
   colorHex: { fontSize: 13, fontFamily: "'JetBrains Mono', monospace", color: color.inkSoft },
+  toggleRow: { display: "flex", alignItems: "center", gap: 10, cursor: "pointer" },
+  toggleLabel: { fontSize: 13, color: color.inkSoft },
+  upgradeLink: { fontSize: 12.5, color: color.accent, fontWeight: 600, textDecoration: "none" },
 
   ctaList: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 8 },
   ctaRow: { display: "flex", gap: 8 },

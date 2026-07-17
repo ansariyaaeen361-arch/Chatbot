@@ -10,6 +10,7 @@ const {
   updateFaqs,
   getTeam,
   inviteTeamMember,
+  removeTeamMember,
   addKnowledgeEntry,
   addKnowledgeFromUrl,
   removeKnowledgeEntry,
@@ -24,6 +25,7 @@ router.put('/me', auth, requireRole('owner', 'admin'), updateProfile);
 router.post('/logo', auth, requireRole('owner', 'admin'), upload.single('logo'), uploadLogo);
 router.put('/faqs', auth, requireRole('owner', 'admin'), updateFaqs);
 router.post('/invite', auth, requireRole('owner', 'admin'), inviteTeamMember);
+router.delete('/team/:userId', auth, requireRole('owner', 'admin'), removeTeamMember);
 
 router.post('/knowledge', auth, requireRole('owner', 'admin'), addKnowledgeEntry);
 router.post('/knowledge/scan', auth, requireRole('owner', 'admin'), addKnowledgeFromUrl);

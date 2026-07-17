@@ -28,6 +28,18 @@ export default function Team() {
     api.get("/business/team").then((res) => setTeam(res.data));
   }
 
+  async function handleRemove(member) {
+    if (!confirm(`Remove ${member.name} from your team? They'll lose access immediately.`)) return;
+    setError(""); setMsg("");
+    try {
+      await api.delete(`/business/team/${member._id}`);
+      setMsg(`${member.name} removed.`);
+      loadTeam();
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to remove team member");
+    }
+  }
+
   async function handleInvite(e) {
     e.preventDefault();
     setError(""); setMsg("");
@@ -56,15 +68,15 @@ export default function Team() {
           <p style={s.subtitle}>Add the people who'll pick up live chats and manage this workspace.</p>
         </header>
 
-        {isAdmin && businessPlan === "trial" && (
+        {isAdmin && ["trial", "starter"].includes(businessPlan) && (
           <div className="forge-card" style={s.card}>
             <h2 style={s.cardTitle}>Add a team member</h2>
-            <p style={s.cardDesc}>Team members are available on Basic and Pro plans.</p>
+            <p style={s.cardDesc}>Team members are available on Growth and Pro plans.</p>
             <Link to="/billing" className="forge-btn-primary" style={s.primaryBtn}>Upgrade your plan →</Link>
           </div>
         )}
 
-        {isAdmin && businessPlan && businessPlan !== "trial" && (
+        {isAdmin && businessPlan && !["trial", "starter"].includes(businessPlan) && (
           <div className="forge-card" style={s.card}>
             <h2 style={s.cardTitle}>Add a team member</h2>
             <p style={s.cardDesc}>Share these login details with them directly — they'll sign in with this email and password.</p>
@@ -104,18 +116,31 @@ export default function Team() {
         <div className="forge-card" style={{ ...s.card, marginTop: 20 }}>
           <h2 style={s.cardTitle}>Current team ({team.length})</h2>
           <div style={s.teamList}>
-            {team.map((t) => (
-              <div key={t._id} style={s.teamRow}>
-                <div style={s.teamAvatar}>{t.name.charAt(0).toUpperCase()}</div>
-                <div style={{ flex: 1 }}>
-                  <div style={s.teamName}>{t.name}</div>
-                  <div style={s.teamEmail}>{t.email}</div>
+            {team.map((t) => {
+              const isSelf = t.email === user?.email;
+              return (
+                <div key={t._id} style={s.teamRow}>
+                  <div style={s.teamAvatar}>{t.name.charAt(0).toUpperCase()}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={s.teamName}>{t.name}</div>
+                    <div style={s.teamEmail}>{t.email}</div>
+                  </div>
+                  <span style={{ ...s.roleBadge, ...(t.role === "owner" ? s.roleBadgeOwner : t.role === "admin" ? s.roleBadgeAdmin : s.roleBadgeAgent) }}>
+                    {t.role}
+                  </span>
+                  {isAdmin && !isSelf && (
+                    <button
+                      className="forge-chip-remove"
+                      style={s.chipRemove}
+                      title={`Remove ${t.name}`}
+                      onClick={() => handleRemove(t)}
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
-                <span style={{ ...s.roleBadge, ...(t.role === "owner" ? s.roleBadgeOwner : t.role === "admin" ? s.roleBadgeAdmin : s.roleBadgeAgent) }}>
-                  {t.role}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </main>
@@ -160,4 +185,5 @@ const s = {
   roleBadgeOwner: { background: "#F3E4C7", color: "#8A5A1F" },
   roleBadgeAdmin: { background: color.accentSoft, color: color.accentDeep },
   roleBadgeAgent: { background: color.borderSoft, color: color.inkSoft },
+  chipRemove: { background: color.borderSoft, border: "none", borderRadius: 8, cursor: "pointer", padding: "0 12px", height: 30, color: color.danger, fontSize: 13, marginLeft: 10, flex: "0 0 auto" },
 };

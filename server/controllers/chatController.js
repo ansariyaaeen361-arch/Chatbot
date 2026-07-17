@@ -2,22 +2,15 @@ const Fuse = require('fuse.js');
 const Business = require('../models/Business');
 const buildSystemPrompt = require('../utils/systemPromptBuilder');
 const ChatLog = require('../models/ChatLog');
+const { countConversationIfNew } = require('../utils/conversationCounter');
+const { resetIfNewMonth } = require('../utils/monthlyReset');
 
 const FAQ_MATCH_THRESHOLD = 0.35;
-
-function resetIfNewMonth(business) {
-  const now = new Date();
-  const reset = new Date(business.spendResetAt);
-  if (now.getMonth() !== reset.getMonth() || now.getFullYear() !== reset.getFullYear()) {
-    business.monthlySpendUsed = 0;
-    business.spendResetAt = now;
-  }
-}
 
 exports.chat = async (req, res) => {
   try {
     const { businessId } = req.params;
-    const { messages } = req.body;
+    const { messages, sessionId } = req.body;
 
     if (!Array.isArray(messages) || !messages.length) {
       return res.status(400).json({ error: 'No messages provided' });
@@ -25,6 +18,9 @@ exports.chat = async (req, res) => {
 
     const business = await Business.findById(businessId);
     if (!business) return res.status(404).json({ error: 'Business not found' });
+
+    resetIfNewMonth(business);
+    await countConversationIfNew(business, sessionId);
 
     const lastMessage = messages[messages.length - 1];
     const userText = lastMessage.content;
@@ -39,13 +35,13 @@ exports.chat = async (req, res) => {
       const result = fuse.search(userText);
 
       if (result.length > 0) {
+        await business.save();
         ChatLog.create({ businessId, userMessage: userText, source: 'faq' }).catch(() => {});
         return res.json({ reply: result[0].item.answer, source: 'faq' });
       }
     }
 
     // ---- 2. Check spend cap before calling AI ----
-    resetIfNewMonth(business);
     if (business.monthlySpendUsed >= business.monthlySpendCap) {
       await business.save();
       ChatLog.create({ businessId, userMessage: userText, source: 'limit_reached' }).catch(() => {});

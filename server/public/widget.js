@@ -15,25 +15,30 @@
   document.body.appendChild(widgetHost);
   var shadowRoot = widgetHost.attachShadow ? widgetHost.attachShadow({ mode: 'open' }) : widgetHost;
 
-  var config = { name: "Chat", logoUrl: "", brandColor: "#1B1A18", ctaLinks: [], launcherType: "default", launcherMediaUrl: "" };
+  var config = { name: "Chat", logoUrl: "", brandColor: "#1B1A18", ctaLinks: [], launcherType: "default", launcherMediaUrl: "", hideBranding: false };
   var busy = false;
   var socket = null;
   var currentAgentInitial = "R";
   var seenMsgIds = {};
 
   var state = loadState();
+  if (!state.sessionId) { state.sessionId = genSessionId(); saveState(); }
 
   var BOT_ICON_SVG = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><path d="M12 2v3M8 21h8M9 8h6a3 3 0 013 3v3a3 3 0 01-3 3H9a3 3 0 01-3-3v-3a3 3 0 013-3z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.5" cy="12.5" r=".8" fill="currentColor"/><circle cx="14.5" cy="12.5" r=".8" fill="currentColor"/></svg>';
   var HUMAN_ICON_SVG = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><path d="M4 13a8 8 0 0116 0v4a2 2 0 01-2 2h-1a1 1 0 01-1-1v-5a1 1 0 011-1h3M4 13v4a2 2 0 002 2h1a1 1 0 001-1v-5a1 1 0 00-1-1H4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var CLOSE_ICON_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>';
   var DEFAULT_LAUNCH_SVG = '<svg viewBox="0 0 24 24" fill="none" width="26" height="26"><path d="M4 5h16v11H8l-4 4V5z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/></svg>';
 
+  function genSessionId() {
+    return 's_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
+  }
+
   function loadState() {
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
       if (raw) return JSON.parse(raw);
     } catch (e) {}
-    return { leadCaptured: false, visitor: { name: "", email: "", phone: "" }, messages: [], liveMode: false, chatId: null };
+    return { leadCaptured: false, visitor: { name: "", email: "", phone: "" }, messages: [], liveMode: false, chatId: null, sessionId: null };
   }
   function saveState() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
@@ -163,9 +168,10 @@
         '</div>' +
         '<div class="mf2-human-row"><button class="mf2-human" id="mf2Human">' + HUMAN_ICON_SVG + '<span>Talk to a Representative →</span></button></div>' +
       '</div>' +
-      '<a class="mf2-branding" href="https://mentalforge.ai" target="_blank" rel="noopener">' +
-        '<span class="mf2-branding-mark">M</span>Powered by MentalForge AI' +
-      '</a>';
+      (config.hideBranding ? '' :
+        '<a class="mf2-branding" href="https://mentalforge.ai" target="_blank" rel="noopener">' +
+          '<span class="mf2-branding-mark">M</span>Powered by MentalForge AI' +
+        '</a>');
 
     shadowRoot.appendChild(launch);
     shadowRoot.appendChild(panel);
@@ -343,7 +349,10 @@
     try {
       var res = await fetch(API_BASE + "/chat/" + businessId, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: state.messages.filter(function (m) { return m.role === 'user' || m.role === 'assistant'; }) })
+        body: JSON.stringify({
+          messages: state.messages.filter(function (m) { return m.role === 'user' || m.role === 'assistant'; }),
+          sessionId: state.sessionId
+        })
       });
       var data = await res.json();
       var reply = data.reply || "Sorry, something went wrong. Please try again.";
@@ -386,7 +395,8 @@
     }
 
     try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
-    state = { leadCaptured: false, visitor: { name: "", email: "", phone: "" }, messages: [], liveMode: false, chatId: null };
+    state = { leadCaptured: false, visitor: { name: "", email: "", phone: "" }, messages: [], liveMode: false, chatId: null, sessionId: genSessionId() };
+    saveState();
     seenMsgIds = {};
     socket = null;
     body.innerHTML = '';
@@ -416,9 +426,17 @@
     humanBtn.disabled = true;
     fetch(API_BASE + "/livechat/create/" + businessId, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(state.visitor)
+      body: JSON.stringify({ name: state.visitor.name, email: state.visitor.email, phone: state.visitor.phone, sessionId: state.sessionId })
     }).then(function (r) { return r.json(); })
       .then(function (data) {
+        if (!data.chatId) {
+          var unavailableMsg = data.message || "Live chat isn't available right now.";
+          addSystem(unavailableMsg);
+          state.messages.push({ role: 'system', content: unavailableMsg });
+          saveState();
+          humanBtn.disabled = false;
+          return;
+        }
         state.liveMode = true;
         state.chatId = data.chatId;
         saveState();

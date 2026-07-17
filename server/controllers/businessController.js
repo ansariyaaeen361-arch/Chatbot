@@ -1,5 +1,6 @@
 const Business = require('../models/Business');
 const scrapeWebsite = require('../utils/websiteScraper');
+const { getPlanConfig, hasFeature } = require('../utils/planConfig');
 
 const MAX_KNOWLEDGE_ENTRIES = 15;
 const MAX_ENTRY_LENGTH = 6000;
@@ -16,11 +17,19 @@ exports.getProfile = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
   try {
-    const allowedFields = ['name', 'website', 'description', 'services', 'targetCustomer', 'tone', 'brandColor', 'ctaLinks', 'welcomeMessage', 'launcherPosition'];
+    const allowedFields = ['name', 'website', 'description', 'services', 'targetCustomer', 'tone', 'brandColor', 'ctaLinks', 'welcomeMessage', 'launcherPosition', 'hideBranding'];
     const updates = {};
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) updates[field] = req.body[field];
     });
+
+    if (updates.hideBranding === true) {
+      const currentBusiness = await Business.findById(req.user.businessId).select('plan');
+      if (!hasFeature(currentBusiness, 'removeBranding')) {
+        return res.status(403).json({ error: 'Removing the "Powered by" badge is available on Growth and Pro plans. Please upgrade.' });
+      }
+    }
+
     const business = await Business.findByIdAndUpdate(req.user.businessId, updates, { new: true });
     res.json(business);
   } catch (err) {
@@ -68,13 +77,35 @@ exports.getTeam = async (req, res) => {
   }
 };
 
+exports.removeTeamMember = async (req, res) => {
+  try {
+    const User = require('../models/User');
+    const { userId } = req.params;
+    if (userId === req.user.userId) {
+      return res.status(400).json({ error: 'You cannot remove your own account.' });
+    }
+    const member = await User.findOne({ _id: userId, businessId: req.user.businessId });
+    if (!member) return res.status(404).json({ error: 'Team member not found' });
+    await User.deleteOne({ _id: userId });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 exports.inviteTeamMember = async (req, res) => {
   try {
     const bcrypt = require('bcryptjs');
     const User = require('../models/User');
     const currentBusiness = await Business.findById(req.user.businessId);
-    if (currentBusiness.plan === 'trial') {
-      return res.status(403).json({ error: 'Team members are available on paid plans. Please upgrade to add your team.' });
+    const seatLimit = getPlanConfig(currentBusiness.plan).seatLimit;
+    const seatsUsed = await User.countDocuments({ businessId: req.user.businessId });
+    if (seatsUsed >= seatLimit) {
+      return res.status(403).json({
+        error: currentBusiness.plan === 'trial'
+          ? 'Team members are available on paid plans. Please upgrade to add your team.'
+          : `Your plan is limited to ${seatLimit} seat${seatLimit === 1 ? '' : 's'}. Please upgrade to add more team members.`
+      });
     }
     const { name, email, password, role } = req.body;
     if (!['admin', 'agent'].includes(role)) {

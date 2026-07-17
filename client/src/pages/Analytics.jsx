@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import api from "../api/axios";
 import { color, layout, globalStyles } from "../theme";
@@ -8,11 +9,14 @@ export default function Analytics() {
   const [topQuestions, setTopQuestions] = useState([]);
   const [leads, setLeads] = useState([]);
   const [exporting, setExporting] = useState(false);
+  const [blocked, setBlocked] = useState(false);
 
   useEffect(() => {
-    api.get("/analytics/overview").then((res) => setOverview(res.data));
-    api.get("/analytics/top-questions").then((res) => setTopQuestions(res.data));
-    api.get("/analytics/leads").then((res) => setLeads(res.data));
+    api.get("/analytics/overview").then((res) => setOverview(res.data)).catch((err) => {
+      if (err.response?.status === 403) setBlocked(true);
+    });
+    api.get("/analytics/top-questions").then((res) => setTopQuestions(res.data)).catch(() => {});
+    api.get("/analytics/leads").then((res) => setLeads(res.data)).catch(() => {});
   }, []);
 
   const exportCsv = async () => {
@@ -29,6 +33,26 @@ export default function Analytics() {
       setExporting(false);
     }
   };
+
+  if (blocked) {
+    return (
+      <div style={s.shell} className="forge-shell">
+        <style>{globalStyles}</style>
+        <Sidebar />
+        <main style={layout.main(760)} className="forge-main">
+          <header style={s.header}>
+            <div style={s.eyebrow}>Insights</div>
+            <h1 style={s.title}>Analytics</h1>
+          </header>
+          <div className="forge-card" style={s.card}>
+            <h2 style={s.cardTitle}>Analytics dashboard</h2>
+            <p style={s.cardDesc}>Analytics is available on Growth and Pro plans.</p>
+            <Link to="/billing" className="forge-btn-primary" style={s.primaryBtn}>Upgrade your plan →</Link>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   if (!overview) {
     return (
@@ -146,6 +170,7 @@ const s = {
   card: { background: color.surface, border: `1px solid ${color.border}`, borderRadius: 14, padding: 22, marginBottom: 18 },
   cardTitle: { fontSize: 15.5, fontWeight: 700, margin: "0 0 4px", fontFamily: "'Space Grotesk', sans-serif" },
   cardDesc: { fontSize: 12.5, color: color.inkSoft, margin: "0 0 14px" },
+  primaryBtn: { background: color.accent, color: "#fff", border: "none", padding: "11px 22px", borderRadius: 9, fontWeight: 600, fontSize: 13.5, cursor: "pointer", display: "inline-block", textDecoration: "none" },
 
   questionList: { display: "flex", flexDirection: "column", gap: 8 },
   questionRow: { display: "flex", justifyContent: "space-between", padding: "8px 10px", background: "#FBFBFD", borderRadius: 8, fontSize: 13 },

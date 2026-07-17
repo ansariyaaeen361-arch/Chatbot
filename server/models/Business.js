@@ -37,6 +37,10 @@ const businessSchema = new mongoose.Schema({
     type: String,
     default: "#1B1A18",
   },
+  hideBranding: {
+    type: Boolean,
+    default: false,
+  },
 
   description: {
     type: String,
@@ -91,6 +95,7 @@ const businessSchema = new mongoose.Schema({
 
   plan: {
     type: String,
+    enum: ["trial", "starter", "basic", "pro"],
     default: "trial",
   },
 
@@ -99,6 +104,7 @@ const businessSchema = new mongoose.Schema({
     default: 10,
   },
   monthlySpendUsed: { type: Number, default: 0 },
+  monthlyConversationsUsed: { type: Number, default: 0 },
   spendResetAt: { type: Date, default: Date.now },
 
   paypalSubscriptionId: { type: String, default: null },

@@ -1,15 +1,17 @@
 const { paypalFetch, verifyWebhookEvent } = require('../utils/paypalClient');
 const Business = require('../models/Business');
+const { getPlanConfig } = require('../utils/planConfig');
 
 const PLAN_MAP = {
+  starter: process.env.PAYPAL_STARTER_PLAN_ID,
   basic: process.env.PAYPAL_BASIC_PLAN_ID,
   pro: process.env.PAYPAL_PRO_PLAN_ID
 };
-const SPEND_CAPS = { basic: 20, pro: 100 };
 
 function planFromPlanId(planId) {
   if (planId === process.env.PAYPAL_PRO_PLAN_ID) return 'pro';
   if (planId === process.env.PAYPAL_BASIC_PLAN_ID) return 'basic';
+  if (planId === process.env.PAYPAL_STARTER_PLAN_ID) return 'starter';
   return 'trial';
 }
 
@@ -63,7 +65,7 @@ exports.confirmSubscription = async (req, res) => {
       paypalSubscriptionId: subscriptionId,
       plan: resolvedPlan,
       planStatus: sub.status === 'ACTIVE' ? 'active' : 'pending',
-      monthlySpendCap: SPEND_CAPS[resolvedPlan] || 20
+      monthlySpendCap: getPlanConfig(resolvedPlan).spendCap
     }, { new: true });
 
     res.json(business);

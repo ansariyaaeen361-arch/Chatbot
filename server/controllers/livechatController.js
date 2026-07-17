@@ -1,11 +1,21 @@
 const Chat = require("../models/Chat");
 const Message = require("../models/Message");
+const Business = require("../models/Business");
+const { countConversationIfNew } = require("../utils/conversationCounter");
+const { resetIfNewMonth } = require("../utils/monthlyReset");
+const { hasFeature } = require("../utils/planConfig");
 
 // PUBLIC — widget creates a new chat
 exports.createChat = async (req, res) => {
   try {
     const { businessId } = req.params;
-    const { name, email, phone } = req.body;
+    const { name, email, phone, sessionId } = req.body;
+
+    const business = await Business.findById(businessId);
+    if (!business) return res.status(404).json({ error: "Business not found" });
+    if (!hasFeature(business, "liveChat")) {
+      return res.json({ error: "live_chat_unavailable", message: "Live chat isn't available on this plan." });
+    }
 
     const chat = await Chat.create({
       businessId,
@@ -13,6 +23,9 @@ exports.createChat = async (req, res) => {
       visitorEmail: email || "",
       visitorPhone: phone || "",
     });
+
+    resetIfNewMonth(business);
+    await countConversationIfNew(business, sessionId);
 
     req.app.get("io").to(`business_${businessId}`).emit("refresh");
     res.json({ chatId: chat._id });
