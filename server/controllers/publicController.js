@@ -29,7 +29,7 @@ async function notifyOwnerOfLead(businessId, lead) {
 exports.getPublicConfig = async (req, res) => {
   try {
     const business = await Business.findById(req.params.businessId)
-      .select('name logoUrl brandColor ctaLinks launcherType launcherMediaUrl welcomeMessage launcherPosition hideBranding');
+      .select('name logoUrl brandColor ctaLinks launcherType launcherMediaUrl welcomeMessage launcherPosition hideBranding faqs');
     if (!business) return res.status(404).json({ error: 'Business not found' });
     res.json(business);
   } catch (err) {
