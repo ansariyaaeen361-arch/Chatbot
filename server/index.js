@@ -37,6 +37,10 @@ app.use('/api/account', require('./routes/accountRoutes'));
 io.on('connection', (socket) => {
   socket.on('join_business', (businessId) => socket.join(`business_${businessId}`));
   socket.on('join_chat', (chatId) => socket.join(`chat_${chatId}`));
+  // Agent typing indicator — broadcast to visitor in the same chat room
+  socket.on('agent_typing', (chatId) => {
+    socket.to(`chat_${chatId}`).emit('agent_typing');
+  });
 });
 
 const PORT = process.env.PORT || 5000;

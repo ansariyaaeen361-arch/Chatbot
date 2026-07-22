@@ -54,7 +54,14 @@ export default function Login() {
           />
         </Field>
 
-        <Field label="Password">
+        <Field
+          label="Password"
+          action={
+            <Link to="/forgot-password" style={s.forgotLink}>
+              Forgot password?
+            </Link>
+          }
+        >
           <div style={s.passwordWrap}>
             <input
               className="forge-input"
@@ -81,16 +88,19 @@ export default function Login() {
           {submitting ? 'Signing in…' : 'Sign in'}
         </button>
 
-        <p style={s.link}>No account? <Link to="/signup" style={s.linkAnchor}>Sign up</Link></p>
+        <p style={s.link}>Don't have an account? <Link to="/signup" style={s.linkAnchor}>Sign up</Link></p>
       </form>
     </div>
   );
 }
 
-function Field({ label, children }) {
+function Field({ label, children, action }) {
   return (
     <div style={{ marginBottom: 14 }}>
-      <label style={s.label}>{label}</label>
+      <div style={s.labelRow}>
+        <label style={s.label}>{label}</label>
+        {action}
+      </div>
       {children}
     </div>
   );
@@ -129,7 +139,9 @@ const s = {
   title: { fontSize: 21, fontWeight: 700, margin: '0 0 4px', letterSpacing: '-0.02em', color: color.ink, fontFamily: "'Space Grotesk', sans-serif" },
   subtitle: { fontSize: 13, color: color.inkSoft, margin: '0 0 22px' },
 
-  label: { display: 'block', fontSize: 12, color: color.inkSoft, fontWeight: 600, marginBottom: 6 },
+  labelRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  label: { display: 'block', fontSize: 12, color: color.inkSoft, fontWeight: 600, margin: 0 },
+  forgotLink: { fontSize: 12, color: color.accentDeep, fontWeight: 600, textDecoration: 'none' },
   input: { width: '100%', boxSizing: 'border-box', padding: '10px 12px', border: `1px solid ${color.border}`, borderRadius: 9, fontSize: 13.5, fontFamily: 'inherit', background: '#FBFBFD', color: color.ink },
 
   passwordWrap: { position: 'relative' },

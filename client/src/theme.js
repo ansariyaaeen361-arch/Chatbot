@@ -62,6 +62,15 @@ ${fontImport}
 .forge-chip-remove { transition: background .15s ease; }
 .forge-chip-remove:hover { background: #F6DBD9; }
 
+.forge-quick-chip { transition: background .15s ease, color .15s ease, transform .12s ease, box-shadow .15s ease; }
+.forge-quick-chip:hover { background: ${color.accent} !important; color: #ffffff !important; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(91,91,214,.30); }
+.forge-quick-chip:active { transform: translateY(0) scale(.97); }
+
+.forge-quick-scroll::-webkit-scrollbar { height: 4px; }
+.forge-quick-scroll::-webkit-scrollbar-track { background: ${color.bg}; border-radius: 4px; }
+.forge-quick-scroll::-webkit-scrollbar-thumb { background: ${color.border}; border-radius: 4px; }
+.forge-quick-scroll::-webkit-scrollbar-thumb:hover { background: ${color.accent}; }
+
 .forge-toggle { position: relative; display: inline-block; width: 40px; height: 22px; flex: 0 0 auto; }
 .forge-toggle input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
 .forge-toggle-track { position: absolute; inset: 0; background: #D8D9E4; border-radius: 999px; transition: background .15s ease; pointer-events: none; }

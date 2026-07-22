@@ -455,7 +455,7 @@ export default function Dashboard() {
                   </div>
                   <label className="forge-ghost" style={s.uploadBtn}>
                     Upload image / video
-                    <input type="file" accept="image/*,video/*" onChange={uploadLauncherMedia} style={{ display: "none" }} />
+                    <input type="file" accept=" image/*,video/*" onChange={uploadLauncherMedia} style={{ display: "none" }} />
                   </label>
                 </div>
                 {business.launcherType && business.launcherType !== "default" && (

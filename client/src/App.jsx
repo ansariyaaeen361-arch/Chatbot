@@ -14,6 +14,7 @@ import VerifyEmail from './pages/VerifyEmail';
 import ResetPassword from './pages/ResetPassword';
 import VerifyEmailPending from './pages/VerifyEmailPending';
 import Account from './pages/Account';
+import ForgotPassword from './pages/ForgotPassword';
 function App() {
   return (
     <BrowserRouter>
@@ -33,6 +34,7 @@ function App() {
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/verify-email-pending" element={<VerifyEmailPending />} />
           <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
