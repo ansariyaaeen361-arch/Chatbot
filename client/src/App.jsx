@@ -8,7 +8,6 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Team from './pages/Team';
 import Analytics from './pages/Analytics';
 import Billing from './pages/Billing';
-import BillingConfirm from './pages/BillingConfirm';
 import Start from './pages/Start';
 import VerifyEmail from './pages/VerifyEmail';
 import ResetPassword from './pages/ResetPassword';
@@ -28,7 +27,6 @@ function App() {
           <Route path="/team" element={<ProtectedRoute><Team /></ProtectedRoute>} />
           <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
           <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
-          <Route path="/billing/confirm" element={<ProtectedRoute><BillingConfirm /></ProtectedRoute>} />
           <Route path="/start" element={<Start />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/reset-password" element={<ResetPassword />} />

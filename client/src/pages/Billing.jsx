@@ -150,7 +150,7 @@ export default function Billing() {
                     onClick={() => subscribe(p.id)}
                     disabled={loadingPlan === p.id}
                   >
-                    {loadingPlan === p.id ? "Redirecting to PayPal…" : "Subscribe with PayPal"}
+                    {loadingPlan === p.id ? "Redirecting to Stripe…" : "Subscribe with Stripe"}
                   </button>
                 )}
               </div>

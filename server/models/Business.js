@@ -107,7 +107,7 @@ const businessSchema = new mongoose.Schema({
   monthlyConversationsUsed: { type: Number, default: 0 },
   spendResetAt: { type: Date, default: Date.now },
 
-  paypalSubscriptionId: { type: String, default: null },
+  stripeSubscriptionId: { type: String, default: null },
   planStatus: { type: String, default: "trialing" },
 
   createdAt: {

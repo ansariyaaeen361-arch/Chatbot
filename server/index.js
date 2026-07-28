@@ -6,17 +6,16 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const connectDB = require('./config/db');
-const startPlanExpiryCron = require('./utils/planExpiryCheck');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
 connectDB();
-startPlanExpiryCron();
 app.set('io', io);
 
 app.use(cors());
+app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), require('./controllers/billingController').handleWebhook);
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 app.use(express.static('public'));
@@ -31,7 +30,6 @@ app.use('/api/livechat', require('./routes/livechatRoutes'));
 app.use('/api/onboarding', require('./routes/onboardingRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
 app.use('/api/billing', require('./routes/billingRoutes'));
-app.post('/api/billing/webhook', require('./controllers/billingController').handleWebhook);
 app.use('/api/account', require('./routes/accountRoutes'));
 
 io.on('connection', (socket) => {
