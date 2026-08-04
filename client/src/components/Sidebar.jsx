@@ -8,9 +8,9 @@ const API_ORIGIN = (api.defaults.baseURL || "").replace(/\/api\/?$/, "");
 
 const WORKSPACE_LINKS = [
   { path: "/livechat", label: "Live chat inbox", icon: "chat" },
-  { path: "/team", label: "Team", icon: "users" },
-  { path: "/analytics", label: "Analytics", icon: "chart" },
-  { path: "/billing", label: "Billing", icon: "card" },
+  { path: "/team", label: "Team", icon: "users", roles: ["owner", "admin"] },
+  { path: "/analytics", label: "Analytics", icon: "chart", roles: ["owner", "admin"] },
+  { path: "/billing", label: "Billing", icon: "card", roles: ["owner", "admin"] },
 ];
 
 export default function Sidebar({ setupSections, activeSection, onSectionClick }) {
@@ -85,7 +85,7 @@ export default function Sidebar({ setupSections, activeSection, onSectionClick }
           )}
 
           <div style={s.navGroupLabel}>Workspace</div>
-          {WORKSPACE_LINKS.map((link) => {
+          {WORKSPACE_LINKS.filter((link) => !link.roles || link.roles.includes(user?.role)).map((link) => {
             const isActive = location.pathname === link.path;
             return (
               <Link

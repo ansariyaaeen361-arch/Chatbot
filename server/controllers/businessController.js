@@ -11,7 +11,8 @@ exports.getProfile = async (req, res) => {
     if (!business) return res.status(404).json({ error: 'Business not found' });
     res.json(business);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 
@@ -33,7 +34,8 @@ exports.updateProfile = async (req, res) => {
     const business = await Business.findByIdAndUpdate(req.user.businessId, updates, { new: true });
     res.json(business);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 
@@ -48,7 +50,8 @@ exports.uploadLogo = async (req, res) => {
     );
     res.json({ logoUrl: business.logoUrl });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 
@@ -63,17 +66,21 @@ exports.updateFaqs = async (req, res) => {
     );
     res.json({ faqs: business.faqs });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 
 exports.getTeam = async (req, res) => {
   try {
     const User = require('../models/User');
-    const team = await User.find({ businessId: req.user.businessId }).select('name email role');
+    const isAdmin = req.user.role === 'owner' || req.user.role === 'admin';
+    // Agents only need name/role to pick a chat-transfer target — no need to expose coworker emails to them
+    const team = await User.find({ businessId: req.user.businessId }).select(isAdmin ? 'name email role' : 'name role');
     res.json(team);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 
@@ -89,7 +96,8 @@ exports.removeTeamMember = async (req, res) => {
     await User.deleteOne({ _id: userId });
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 
@@ -111,6 +119,9 @@ exports.inviteTeamMember = async (req, res) => {
     if (!['admin', 'agent'].includes(role)) {
       return res.status(400).json({ error: 'Role must be admin or agent' });
     }
+    if (role === 'admin' && req.user.role !== 'owner') {
+      return res.status(403).json({ error: 'Only the business owner can add new admins.' });
+    }
     const existing = await User.findOne({ email });
     if (existing) return res.status(400).json({ error: 'Email already registered' });
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -120,7 +131,8 @@ exports.inviteTeamMember = async (req, res) => {
     });
     res.json({ success: true, user: { name: user.name, email: user.email, role: user.role } });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 
@@ -145,7 +157,8 @@ exports.addKnowledgeEntry = async (req, res) => {
     await business.save();
     res.json({ knowledgeBase: business.knowledgeBase });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 
@@ -170,7 +183,8 @@ exports.addKnowledgeFromUrl = async (req, res) => {
     await business.save();
     res.json({ knowledgeBase: business.knowledgeBase });
   } catch (err) {
-    res.status(500).json({ error: err.message || 'Could not fetch that page' });
+    console.error(err);
+    res.status(500).json({ error: 'Could not fetch that page. Please check the URL and try again.' });
   }
 };
 
@@ -185,7 +199,8 @@ exports.removeKnowledgeEntry = async (req, res) => {
     await business.save();
     res.json({ knowledgeBase: business.knowledgeBase });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 exports.uploadLauncherMedia = async (req, res) => {
@@ -200,7 +215,8 @@ exports.uploadLauncherMedia = async (req, res) => {
     );
     res.json({ launcherType: business.launcherType, launcherMediaUrl: business.launcherMediaUrl });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 
@@ -213,6 +229,7 @@ exports.removeLauncherMedia = async (req, res) => {
     );
     res.json({ launcherType: business.launcherType, launcherMediaUrl: business.launcherMediaUrl });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };

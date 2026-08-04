@@ -22,7 +22,7 @@ exports.createSubscription = async (req, res) => {
     res.json({ approveUrl });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 
@@ -41,7 +41,7 @@ exports.cancelSubscription = async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 
@@ -51,7 +51,8 @@ exports.getBillingStatus = async (req, res) => {
       .select('plan planStatus monthlySpendCap monthlySpendUsed');
     res.json(business);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 

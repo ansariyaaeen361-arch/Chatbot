@@ -414,6 +414,15 @@
     } catch (e) {}
   }
 
+  function isSafeCtaUrl(url) {
+    try {
+      var scheme = String(url).trim().split(':')[0].toLowerCase();
+      return scheme === 'http' || scheme === 'https' || scheme === 'mailto' || scheme === 'tel';
+    } catch (e) {
+      return false;
+    }
+  }
+
   function addBubble(role, text, ctaUrl, ctaLabel, silent, ts) {
     var cls = role === 'user' ? 'user' : (role === 'rep' ? 'rep' : (role === 'system' ? 'system' : 'bot'));
     var row = document.createElement('div');
@@ -455,7 +464,7 @@
 
     col.appendChild(wrap);
 
-    if (ctaUrl) {
+    if (ctaUrl && isSafeCtaUrl(ctaUrl)) {
       var a = document.createElement('a');
       a.className = 'mf2-cta'; a.href = ctaUrl; a.target = '_blank'; a.rel = 'noopener';
       a.textContent = ctaLabel || 'Learn more';

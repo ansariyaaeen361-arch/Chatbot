@@ -4,10 +4,15 @@ const User = require('../models/User');
 const Business = require('../models/Business');
 const crypto = require('crypto');
 const sendEmail = require('../utils/mailer');
+const { isDisposableEmail } = require('../utils/disposableEmailDomains');
 
 exports.signup = async (req, res) => {
   try {
     const { businessName, name, email, password } = req.body;
+
+    if (isDisposableEmail(email)) {
+      return res.status(400).json({ error: 'Please sign up with a permanent email address.' });
+    }
 
     const existing = await User.findOne({ email });
     if (existing) return res.status(400).json({ error: 'Email already registered' });
@@ -41,7 +46,8 @@ exports.signup = async (req, res) => {
 
     res.json({ token, user: { name: user.name, email: user.email, role: user.role, isVerified: user.isVerified }, businessId: business._id });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 
@@ -79,7 +85,8 @@ exports.login = async (req, res) => {
 
     res.json({ token, user: { name: user.name, email: user.email, role: user.role, isVerified: user.isVerified }, businessId: user.businessId });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 
@@ -128,6 +135,6 @@ exports.resendVerification = async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error('Error sending resendVerification email:', err);
-    res.status(500).json({ error: err.message || 'Something went wrong sending email' });
+    res.status(500).json({ error: 'Something went wrong sending the email. Please try again.' });
   }
 };

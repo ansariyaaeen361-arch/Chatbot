@@ -56,6 +56,6 @@ Based on this, respond with ONLY a JSON object (no markdown, no explanation) in 
     res.json(parsed);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: err.message || 'Failed to analyze website' });
+    res.status(500).json({ error: 'Failed to analyze website. Please try again.' });
   }
 };

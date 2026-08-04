@@ -15,6 +15,7 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     const res = await api.post("/auth/login", { email, password });
     saveSession(res.data);
+    return res.data;
   };
 
   const signup = async (businessName, name, email, password) => {

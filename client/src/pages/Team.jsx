@@ -92,7 +92,7 @@ export default function Team() {
                 <Field label="Role">
                   <select className="forge-input" style={s.input} value={role} onChange={(e) => setRole(e.target.value)}>
                     <option value="agent">Agent — handles own chats</option>
-                    <option value="admin">Admin — sees everything</option>
+                    {user?.role === "owner" && <option value="admin">Admin — sees everything</option>}
                   </select>
                 </Field>
               </div>

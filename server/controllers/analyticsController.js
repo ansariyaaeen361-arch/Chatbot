@@ -43,7 +43,8 @@ exports.getOverview = async (req, res) => {
       periodDays: 30
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 
@@ -62,7 +63,8 @@ exports.getTopQuestions = async (req, res) => {
 
     res.json(top.map(t => ({ question: t._id, count: t.count })));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 
@@ -71,7 +73,8 @@ exports.getLeads = async (req, res) => {
     const leads = await Lead.find({ businessId: req.user.businessId }).sort({ createdAt: -1 });
     res.json(leads);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 
@@ -86,6 +89,7 @@ exports.exportLeadsCsv = async (req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename=leads.csv');
     res.send(csv);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };

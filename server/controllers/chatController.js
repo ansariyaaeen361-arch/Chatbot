@@ -4,6 +4,7 @@ const buildSystemPrompt = require('../utils/systemPromptBuilder');
 const ChatLog = require('../models/ChatLog');
 const { countConversationIfNew } = require('../utils/conversationCounter');
 const { resetIfNewMonth } = require('../utils/monthlyReset');
+const { getPlanConfig } = require('../utils/planConfig');
 
 const FAQ_MATCH_THRESHOLD = 0.35;
 
@@ -19,11 +20,22 @@ exports.chat = async (req, res) => {
     const business = await Business.findById(businessId);
     if (!business) return res.status(404).json({ error: 'Business not found' });
 
-    resetIfNewMonth(business);
+    await resetIfNewMonth(business);
     await countConversationIfNew(business, sessionId);
 
     const lastMessage = messages[messages.length - 1];
     const userText = lastMessage.content;
+
+    // ---- 0. Enforce plan's monthly conversation cap (applies even to free FAQ replies) ----
+    const conversationCap = getPlanConfig(business.plan).conversationCap;
+    if (business.monthlyConversationsUsed > conversationCap) {
+      await business.save();
+      ChatLog.create({ businessId, userMessage: userText, source: 'limit_reached' }).catch(() => {});
+      return res.json({
+        reply: "We're experiencing high demand right now. Please reach out to our team directly and they'll help you out.",
+        source: 'limit_reached'
+      });
+    }
 
     // ---- 1. Try FAQ match first (free, no spend check needed) ----
     if (business.faqs && business.faqs.length) {
@@ -41,9 +53,9 @@ exports.chat = async (req, res) => {
       }
     }
 
-    // ---- 2. Check spend cap before calling AI ----
-    if (business.monthlySpendUsed >= business.monthlySpendCap) {
-      await business.save();
+    // ---- 2. Check spend cap before calling AI (fresh read narrows the race window) ----
+    const spendCheck = await Business.findById(businessId).select('monthlySpendUsed monthlySpendCap');
+    if (spendCheck.monthlySpendUsed >= spendCheck.monthlySpendCap) {
       ChatLog.create({ businessId, userMessage: userText, source: 'limit_reached' }).catch(() => {});
       return res.json({
         reply: "We're experiencing high demand right now. Please reach out to our team directly and they'll help you out.",
@@ -86,18 +98,17 @@ exports.chat = async (req, res) => {
       .join('\n')
       .trim();
 
-    // ---- 4. Track actual spend ----
+    // ---- 4. Track actual spend (atomic $inc — avoids lost updates under concurrent requests) ----
     const usage = data.usage || {};
     const inputCost = ((usage.input_tokens || 0) / 1e6) * 1;
     const outputCost = ((usage.output_tokens || 0) / 1e6) * 5;
-    business.monthlySpendUsed += (inputCost + outputCost);
-    await business.save();
+    await Business.updateOne({ _id: businessId }, { $inc: { monthlySpendUsed: inputCost + outputCost } });
 
     ChatLog.create({ businessId, userMessage: userText, source: 'ai' }).catch(() => {});
 
     res.json({ reply, source: 'ai' });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };

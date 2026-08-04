@@ -14,7 +14,6 @@ const io = new Server(server, { cors: { origin: '*' } });
 connectDB();
 app.set('io', io);
 
-app.use(cors());
 app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), require('./controllers/billingController').handleWebhook);
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
@@ -22,15 +21,20 @@ app.use(express.static('public'));
 
 app.get('/', (req, res) => res.send('Mental Forge SaaS API is running'));
 
-app.use('/api/auth', require('./routes/authRoutes'));
-app.use('/api/business', require('./routes/businessRoutes'));
-app.use('/api/public', require('./routes/publicRoutes'));
-app.use('/api/chat', require('./routes/chatRoutes'));
-app.use('/api/livechat', require('./routes/livechatRoutes'));
-app.use('/api/onboarding', require('./routes/onboardingRoutes'));
-app.use('/api/analytics', require('./routes/analyticsRoutes'));
-app.use('/api/billing', require('./routes/billingRoutes'));
-app.use('/api/account', require('./routes/accountRoutes'));
+// Dashboard-only routes — only ever called from our own frontend, so lock CORS to that origin
+const dashboardCors = cors({ origin: process.env.CLIENT_URL || 'https://app.mentalforge.ai' });
+// Widget-facing routes — embedded on arbitrary customer websites, so must stay open to any origin
+const widgetCors = cors();
+
+app.use('/api/auth', dashboardCors, require('./routes/authRoutes'));
+app.use('/api/business', dashboardCors, require('./routes/businessRoutes'));
+app.use('/api/public', widgetCors, require('./routes/publicRoutes'));
+app.use('/api/chat', widgetCors, require('./routes/chatRoutes'));
+app.use('/api/livechat', widgetCors, require('./routes/livechatRoutes'));
+app.use('/api/onboarding', dashboardCors, require('./routes/onboardingRoutes'));
+app.use('/api/analytics', dashboardCors, require('./routes/analyticsRoutes'));
+app.use('/api/billing', dashboardCors, require('./routes/billingRoutes'));
+app.use('/api/account', dashboardCors, require('./routes/accountRoutes'));
 
 io.on('connection', (socket) => {
   socket.on('join_business', (businessId) => socket.join(`business_${businessId}`));

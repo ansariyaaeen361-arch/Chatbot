@@ -33,7 +33,8 @@ exports.getPublicConfig = async (req, res) => {
     if (!business) return res.status(404).json({ error: 'Business not found' });
     res.json(business);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 
@@ -53,6 +54,7 @@ exports.createLead = async (req, res) => {
       console.log('Lead notification email failed:', e.message)
     );
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };

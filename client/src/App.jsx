@@ -21,12 +21,12 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute roles={['owner', 'admin']}><Dashboard /></ProtectedRoute>} />
           <Route path="/livechat" element={<ProtectedRoute><LiveChat /></ProtectedRoute>} />
           <Route path="*" element={<Login />} />
-          <Route path="/team" element={<ProtectedRoute><Team /></ProtectedRoute>} />
-          <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-          <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
+          <Route path="/team" element={<ProtectedRoute roles={['owner', 'admin']}><Team /></ProtectedRoute>} />
+          <Route path="/analytics" element={<ProtectedRoute roles={['owner', 'admin']}><Analytics /></ProtectedRoute>} />
+          <Route path="/billing" element={<ProtectedRoute roles={['owner', 'admin']}><Billing /></ProtectedRoute>} />
           <Route path="/start" element={<Start />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/reset-password" element={<ResetPassword />} />

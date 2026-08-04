@@ -6,7 +6,8 @@ exports.getMe = async (req, res) => {
     const user = await User.findById(req.user.userId).select('name email role isVerified');
     res.json(user);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 
@@ -28,7 +29,8 @@ exports.updateAccount = async (req, res) => {
     await user.save();
     res.json({ success: true, user: { name: user.name, email: user.email, role: user.role, isVerified: user.isVerified } });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 
@@ -51,6 +53,7 @@ exports.changePassword = async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };

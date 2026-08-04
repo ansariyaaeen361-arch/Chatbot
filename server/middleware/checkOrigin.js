@@ -18,7 +18,9 @@ module.exports = async function checkOrigin(req, res, next) {
       allowedHost = new URL(business.website).hostname.replace(/^www\./, '');
       originHost = new URL(origin).hostname.replace(/^www\./, '');
     } catch (e) {
-      return next(); // if parsing fails, don't block — avoid false positives
+      // missing/unparseable Origin & Referer (e.g. a scripted request with no
+      // browser-set headers) — reject rather than silently allowing through
+      return res.status(403).json({ error: 'This widget is not authorized for this domain.' });
     }
 
     if (allowedHost !== originHost) {
@@ -27,6 +29,6 @@ module.exports = async function checkOrigin(req, res, next) {
 
     next();
   } catch (err) {
-    next(); // fail open — never break the widget due to a server error here
+    res.status(403).json({ error: 'This widget is not authorized for this domain.' });
   }
 };

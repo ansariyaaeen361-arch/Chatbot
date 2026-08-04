@@ -1,9 +1,10 @@
 const Chat = require("../models/Chat");
 const Message = require("../models/Message");
 const Business = require("../models/Business");
+const User = require("../models/User");
 const { countConversationIfNew } = require("../utils/conversationCounter");
 const { resetIfNewMonth } = require("../utils/monthlyReset");
-const { hasFeature } = require("../utils/planConfig");
+const { hasFeature, getPlanConfig } = require("../utils/planConfig");
 
 // PUBLIC — widget creates a new chat
 exports.createChat = async (req, res) => {
@@ -17,6 +18,15 @@ exports.createChat = async (req, res) => {
       return res.json({ error: "live_chat_unavailable", message: "Live chat isn't available on this plan." });
     }
 
+    await resetIfNewMonth(business);
+    await countConversationIfNew(business, sessionId);
+
+    const conversationCap = getPlanConfig(business.plan).conversationCap;
+    if (business.monthlyConversationsUsed > conversationCap) {
+      await business.save();
+      return res.json({ error: "conversation_limit_reached", message: "This business has reached its monthly conversation limit. Please try again later." });
+    }
+
     const chat = await Chat.create({
       businessId,
       visitorName: name || "Website visitor",
@@ -24,59 +34,85 @@ exports.createChat = async (req, res) => {
       visitorPhone: phone || "",
     });
 
-    resetIfNewMonth(business);
-    await countConversationIfNew(business, sessionId);
-
     req.app.get("io").to(`business_${businessId}`).emit("refresh");
     res.json({ chatId: chat._id });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 
-// PUBLIC — visitor or rep sends a message
+// PUBLIC (visitor) / AUTH (rep) — sends a message
 exports.sendMessage = async (req, res) => {
   try {
     const { chatId } = req.params;
-    const { sender, text, repName } = req.body;
+    const { sender, text } = req.body;
 
     if (!text || !sender)
       return res.status(400).json({ error: "sender and text required" });
+    if (sender !== "visitor" && sender !== "rep")
+      return res.status(400).json({ error: "Invalid sender" });
+
+    let repName = null;
+    if (sender === "rep") {
+      if (!req.user) return res.status(401).json({ error: "Login required to send as a rep" });
+      const repUser = await User.findById(req.user.userId).select("isVerified");
+      if (!repUser || !repUser.isVerified) {
+        return res.status(403).json({ error: "Please verify your email before continuing." });
+      }
+      if (req.user.role !== "owner") {
+        const repBusiness = await Business.findById(req.user.businessId).select("plan");
+        const seatLimit = getPlanConfig(repBusiness.plan).seatLimit;
+        const seatsUsed = await User.countDocuments({ businessId: req.user.businessId });
+        if (seatsUsed > seatLimit) {
+          return res.status(403).json({ error: "This business has more team members than its plan allows." });
+        }
+      }
+      const chat = await Chat.findOne({ _id: chatId, businessId: req.user.businessId });
+      if (!chat) return res.status(404).json({ error: "Chat not found" });
+      repName = req.user.name || null;
+    }
 
     const message = await Message.create({
       chatId,
       sender,
       text,
-      repName: repName || null,
+      repName,
     });
     req.app.get("io").to(`chat_${chatId}`).emit("new_message", message);
 
     res.json({ success: true, message });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 
-// PUBLIC — get messages for a chat (widget resume + dashboard)
+// AUTH (dashboard only) — get messages for a chat
 exports.getMessages = async (req, res) => {
   try {
+    const chat = await Chat.findOne({ _id: req.params.chatId, businessId: req.user.businessId });
+    if (!chat) return res.status(404).json({ error: "Chat not found" });
+
     const messages = await Message.find({ chatId: req.params.chatId }).sort({
       timestamp: 1,
     });
     res.json(messages);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 
-// AUTH — get chat status (widget polls this too, to know when active/closed)
+// AUTH (dashboard only) — get chat status
 exports.getChat = async (req, res) => {
   try {
-    const chat = await Chat.findById(req.params.chatId);
+    const chat = await Chat.findOne({ _id: req.params.chatId, businessId: req.user.businessId });
     if (!chat) return res.status(404).json({ error: "Chat not found" });
     res.json(chat);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 
@@ -96,7 +132,8 @@ exports.listChats = async (req, res) => {
     });
     res.json(chats);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 
@@ -105,7 +142,7 @@ exports.acceptChat = async (req, res) => {
   try {
     const { chatId } = req.params;
     const chat = await Chat.findOneAndUpdate(
-      { _id: chatId, status: "waiting", assignedTo: null },
+      { _id: chatId, businessId: req.user.businessId, status: "waiting", assignedTo: null },
       {
         status: "active",
         assignedTo: req.user.userId,
@@ -137,7 +174,8 @@ exports.acceptChat = async (req, res) => {
 
     res.json(chat);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 
@@ -148,34 +186,38 @@ exports.transferChat = async (req, res) => {
     const { newUserId, newUserName } = req.body;
     const isAdmin = req.user.role === "owner" || req.user.role === "admin";
 
-    const chat = await Chat.findById(chatId);
+    const chat = await Chat.findOne({ _id: chatId, businessId: req.user.businessId });
     if (!chat) return res.status(404).json({ error: "Chat not found" });
     if (!isAdmin && String(chat.assignedTo) !== req.user.userId) {
       return res.status(403).json({ error: "Not your chat to transfer" });
     }
 
-    chat.assignedTo = newUserId;
-    chat.assignedToName = newUserName;
+    const targetUser = await User.findOne({ _id: newUserId, businessId: req.user.businessId });
+    if (!targetUser) return res.status(400).json({ error: "That teammate was not found" });
+
+    chat.assignedTo = targetUser._id;
+    chat.assignedToName = targetUser.name;
     await chat.save();
 
     await Message.create({
       chatId,
       sender: "system",
-      text: `${newUserName} has joined the chat.`,
-      repName: newUserName,
+      text: `${targetUser.name} has joined the chat.`,
+      repName: targetUser.name,
     });
 
     const io = req.app.get("io");
     io.to(`chat_${chatId}`).emit("new_message", {
       sender: "system",
-      text: `${newUserName} has joined the chat.`,
+      text: `${targetUser.name} has joined the chat.`,
     });
     io.to(`chat_${chatId}`).emit("chat_updated", chat);
     io.to(`business_${chat.businessId}`).emit("refresh");
 
     res.json(chat);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 
@@ -183,11 +225,12 @@ exports.transferChat = async (req, res) => {
 exports.closeChat = async (req, res) => {
   try {
     const { chatId } = req.params;
-    const chat = await Chat.findByIdAndUpdate(
-      chatId,
+    const chat = await Chat.findOneAndUpdate(
+      { _id: chatId, businessId: req.user.businessId },
       { status: "closed", closedAt: new Date() },
       { new: true },
     );
+    if (!chat) return res.status(404).json({ error: "Chat not found" });
 
     const io = req.app.get("io");
     io.to(`chat_${chatId}`).emit("chat_updated", chat);
@@ -195,7 +238,8 @@ exports.closeChat = async (req, res) => {
 
     res.json(chat);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
 // PUBLIC — visitor leaves/ends their own chat (no auth needed)
@@ -220,6 +264,7 @@ exports.leaveChat = async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };

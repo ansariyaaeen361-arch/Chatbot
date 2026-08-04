@@ -1,9 +1,11 @@
 const ConversationSession = require('../models/ConversationSession');
+const Business = require('../models/Business');
 
 // Increments business.monthlyConversationsUsed at most once per (businessId, sessionId),
 // so a visitor who starts with AI chat and escalates to a live agent is only counted once.
-// Saves `business` immediately when it counts, so the increment isn't lost if the caller's
-// own save is skipped by an early return later in the request (e.g. an upstream API failure).
+// Uses an atomic $inc (not load-mutate-save) so concurrent requests for different
+// sessions can't clobber each other's increment, then syncs the in-memory value
+// so the caller's own cap check in the same request sees the up-to-date count.
 async function countConversationIfNew(business, sessionId) {
   if (!business || !sessionId) return;
   try {
@@ -12,8 +14,12 @@ async function countConversationIfNew(business, sessionId) {
     if (err.code === 11000) return; // already counted this session
     throw err;
   }
-  business.monthlyConversationsUsed = (business.monthlyConversationsUsed || 0) + 1;
-  await business.save();
+  const updated = await Business.findByIdAndUpdate(
+    business._id,
+    { $inc: { monthlyConversationsUsed: 1 } },
+    { new: true, select: 'monthlyConversationsUsed' }
+  );
+  business.monthlyConversationsUsed = updated.monthlyConversationsUsed;
 }
 
 module.exports = { countConversationIfNew };
