@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/axios";
 import Sidebar from "../components/Sidebar";
+import BackToDashboard from "../components/BackToDashboard";
 import { color, layout, globalStyles } from "../theme";
 
 export default function Account() {
@@ -76,7 +77,7 @@ export default function Account() {
     setResendMsg("");
     try {
       const res = await api.post("/auth/resend-verification");
-      setResendMsg(res.data.alreadyVerified ? "Your email is already verified." : "Verification email sent — check your inbox.");
+      setResendMsg(res.data.alreadyVerified ? "Your email is already verified." : "Verification email sent. Check your inbox.");
     } catch (err) {
       setResendMsg(err.response?.data?.error || "Could not send verification email");
     } finally {
@@ -102,6 +103,7 @@ export default function Account() {
       <Sidebar />
 
       <main style={layout.main(640)} className="forge-main">
+        <BackToDashboard />
         <header style={s.header}>
           <div style={s.eyebrow}>Workspace</div>
           <h1 style={s.title}>Account settings</h1>
@@ -146,7 +148,7 @@ export default function Account() {
         <div className="forge-card" style={{ ...s.card, marginTop: 20 }}>
           <div style={s.cardAccentBar} />
           <h2 style={s.cardTitle}>Password</h2>
-          <p style={s.cardDesc}>Choose a new password — at least 6 characters.</p>
+          <p style={s.cardDesc}>Choose a new password (at least 6 characters).</p>
 
           <form onSubmit={savePassword} style={{ marginTop: 16 }}>
             {passwordErr && <div style={s.errorBox}>{passwordErr}</div>}

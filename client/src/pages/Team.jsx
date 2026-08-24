@@ -3,12 +3,15 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/axios";
 import Sidebar from "../components/Sidebar";
+import BackToDashboard from "../components/BackToDashboard";
 import { color, layout, globalStyles } from "../theme";
 
 export default function Team() {
   const { user } = useAuth();
   const [team, setTeam] = useState([]);
   const [businessPlan, setBusinessPlan] = useState(null);
+  const [autoAssign, setAutoAssign] = useState(false);
+  const [savingAutoAssign, setSavingAutoAssign] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,8 +24,23 @@ export default function Team() {
 
   useEffect(() => {
     loadTeam();
-    api.get("/business/me").then((res) => setBusinessPlan(res.data.plan));
+    api.get("/business/me").then((res) => {
+      setBusinessPlan(res.data.plan);
+      setAutoAssign(!!res.data.autoAssignChats);
+    });
   }, []);
+
+  async function toggleAutoAssign(checked) {
+    setAutoAssign(checked);
+    setSavingAutoAssign(true);
+    try {
+      await api.put("/business/me", { autoAssignChats: checked });
+    } catch {
+      setAutoAssign(!checked);
+    } finally {
+      setSavingAutoAssign(false);
+    }
+  }
 
   function loadTeam() {
     api.get("/business/team").then((res) => setTeam(res.data));
@@ -62,6 +80,7 @@ export default function Team() {
       <Sidebar />
 
       <main style={layout.main(640)} className="forge-main">
+        <BackToDashboard />
         <header style={s.header}>
           <div style={s.eyebrow}>Workspace</div>
           <h1 style={s.title}>Team</h1>
@@ -79,7 +98,7 @@ export default function Team() {
         {isAdmin && businessPlan && !["trial", "starter"].includes(businessPlan) && (
           <div className="forge-card" style={s.card}>
             <h2 style={s.cardTitle}>Add a team member</h2>
-            <p style={s.cardDesc}>Share these login details with them directly — they'll sign in with this email and password.</p>
+            <p style={s.cardDesc}>Share these login details with them directly so they can sign in with this email and password.</p>
 
             <form onSubmit={handleInvite}>
               {error && <div style={s.error}>{error}</div>}
@@ -91,8 +110,8 @@ export default function Team() {
                 </Field>
                 <Field label="Role">
                   <select className="forge-input" style={s.input} value={role} onChange={(e) => setRole(e.target.value)}>
-                    <option value="agent">Agent — handles own chats</option>
-                    {user?.role === "owner" && <option value="admin">Admin — sees everything</option>}
+                    <option value="agent">Agent (handles their own chats)</option>
+                    {user?.role === "owner" && <option value="admin">Admin (sees everything)</option>}
                   </select>
                 </Field>
               </div>
@@ -110,6 +129,20 @@ export default function Team() {
                 {inviting ? "Adding…" : "Add team member"}
               </button>
             </form>
+          </div>
+        )}
+
+        {isAdmin && team.length > 1 && (
+          <div className="forge-card" style={{ ...s.card, marginTop: 20 }}>
+            <h2 style={s.cardTitle}>Chat assignment</h2>
+            <p style={s.cardDesc}>When someone starts a live chat, automatically hand it to whichever teammate has the fewest active chats right now, instead of leaving it in the waiting queue for someone to accept.</p>
+            <label style={s.toggleRow}>
+              <span className="forge-toggle">
+                <input type="checkbox" checked={autoAssign} onChange={(e) => toggleAutoAssign(e.target.checked)} disabled={savingAutoAssign} />
+                <span className="forge-toggle-track" />
+              </span>
+              <span style={s.toggleLabel}>{autoAssign ? "Auto-assign to least-busy teammate" : "Off — chats wait in the queue to be accepted"}</span>
+            </label>
           </div>
         )}
 
@@ -172,6 +205,9 @@ const s = {
   input: { width: "100%", boxSizing: "border-box", padding: "10px 12px", border: `1px solid ${color.border}`, borderRadius: 9, fontSize: 13.5, fontFamily: "inherit", background: "#FBFBFD" },
 
   primaryBtn: { background: color.accent, color: "#fff", border: "none", padding: "11px 22px", borderRadius: 9, fontWeight: 600, fontSize: 13.5, cursor: "pointer", marginTop: 4, display: "inline-block", textDecoration: "none" },
+
+  toggleRow: { display: "flex", alignItems: "center", gap: 10, cursor: "pointer" },
+  toggleLabel: { fontSize: 13, color: color.inkSoft },
 
   error: { background: color.dangerSoft, color: color.danger, padding: "9px 12px", borderRadius: 8, fontSize: 12.5, marginBottom: 14 },
   success: { background: color.successSoft, color: color.successText, padding: "9px 12px", borderRadius: 8, fontSize: 12.5, marginBottom: 14 },

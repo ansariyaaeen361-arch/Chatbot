@@ -1,0 +1,17 @@
+{
+  "sidebar": {
+    "setup": "التوصيل",
+    "workspace": "Workspace (مساحة العمل)",
+    "liveChatInbox": "البريد الوارد للدردشة المباشرة",
+    "team": "فريق",
+    "analytics": "التحليلات",
+    "billing": "إصدار الفواتير",
+    "yourBusiness": "لأعمالك التجارية",
+    "plan": "التخطيط",
+    "accountSettings": "إعدادات الحساب",
+    "signOut": "تسجيل الخروج",
+    "openMenu": "فتح القائمة",
+    "closeMenu": "إغلاق القائمة",
+    "language": "اللغة"
+  }
+}

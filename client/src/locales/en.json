@@ -1,0 +1,17 @@
+{
+  "sidebar": {
+    "setup": "Setup",
+    "workspace": "Workspace",
+    "liveChatInbox": "Live chat inbox",
+    "team": "Team",
+    "analytics": "Analytics",
+    "billing": "Billing",
+    "yourBusiness": "Your business",
+    "plan": "PLAN",
+    "accountSettings": "Account settings",
+    "signOut": "Sign out",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "language": "Language"
+  }
+}

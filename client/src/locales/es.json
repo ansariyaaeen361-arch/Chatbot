@@ -1,0 +1,17 @@
+{
+  "sidebar": {
+    "setup": "Preparación",
+    "workspace": "Workspace",
+    "liveChatInbox": "Bandeja de entrada del chat en directo",
+    "team": "Equipo",
+    "analytics": "Estadísticas",
+    "billing": "Facturación III.",
+    "yourBusiness": "nuestro negocio",
+    "plan": "PLANIFIFCAR",
+    "accountSettings": "Ajustes de la cuenta",
+    "signOut": "Cerrar sesión",
+    "openMenu": "Abrir menú",
+    "closeMenu": "Cerrar menú",
+    "language": "Lenguaje"
+  }
+}

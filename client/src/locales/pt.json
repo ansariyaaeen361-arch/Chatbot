@@ -1,0 +1,17 @@
+{
+  "sidebar": {
+    "setup": "Configuração",
+    "workspace": "Área de trabalho",
+    "liveChatInbox": "Caixa de entrada de chat ao vivo",
+    "team": "Equipa",
+    "analytics": "Analíticos",
+    "billing": "Faturação",
+    "yourBusiness": "O seu negócio",
+    "plan": "PLANEAR",
+    "accountSettings": "Configurações de conta",
+    "signOut": "Assinar a saída",
+    "openMenu": "Abrir menu",
+    "closeMenu": "Fechar menu",
+    "language": "Língua"
+  }
+}

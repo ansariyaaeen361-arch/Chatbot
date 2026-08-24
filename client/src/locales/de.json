@@ -1,0 +1,17 @@
+{
+  "sidebar": {
+    "setup": "Einrichtung",
+    "workspace": "Arbeitsbereich",
+    "liveChatInbox": "Live-Chat-Posteingang",
+    "team": "Team",
+    "analytics": "Analysen",
+    "billing": "Rechnungsstellung",
+    "yourBusiness": "Dein Business",
+    "plan": "PLANEN",
+    "accountSettings": "Accounteinstellungen",
+    "signOut": "Abmelden",
+    "openMenu": "Menü öffnen",
+    "closeMenu": "Menu schliessen",
+    "language": "Sprache"
+  }
+}

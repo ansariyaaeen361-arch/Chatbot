@@ -3,22 +3,37 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/axios";
 import Sidebar from "../components/Sidebar";
-import { color, layout, globalStyles } from "../theme";
+import WidgetPreview from "../components/WidgetPreview";
+import { color, radius, shadow, layout, globalStyles } from "../theme";
 
 const API_ORIGIN = (api.defaults.baseURL || "").replace(/\/api\/?$/, "");
 
-const SECTION_IDS = ["quickstart", "profile", "branding", "faqs", "knowledge", "embed"];
+const SECTION_IDS = ["quickstart", "profile", "branding", "hours", "faqs", "knowledge", "crm", "embed"];
 
 const SETUP_SECTIONS = [
   ["quickstart", "01", "Quick start"],
   ["profile", "02", "Business profile"],
   ["branding", "03", "Branding"],
-  ["faqs", "04", "FAQs"],
-  ["knowledge", "05", "Knowledge base"],
-  ["embed", "06", "Install widget"],
+  ["hours", "04", "Business hours"],
+  ["faqs", "05", "FAQs"],
+  ["knowledge", "06", "Knowledge base"],
+  ["crm", "07", "CRM integration"],
+  ["embed", "08", "Install widget"],
 ];
 
-const TOTAL_STEPS = "06";
+const TOTAL_STEPS = "08";
+
+const DAYS = [
+  ["mon", "Monday"], ["tue", "Tuesday"], ["wed", "Wednesday"], ["thu", "Thursday"],
+  ["fri", "Friday"], ["sat", "Saturday"], ["sun", "Sunday"],
+];
+
+const TIMEZONES = [
+  "UTC", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
+  "America/Sao_Paulo", "Europe/London", "Europe/Paris", "Europe/Berlin", "Europe/Moscow",
+  "Africa/Cairo", "Asia/Karachi", "Asia/Kolkata", "Asia/Dhaka", "Asia/Dubai",
+  "Asia/Shanghai", "Asia/Tokyo", "Asia/Singapore", "Australia/Sydney", "Pacific/Auckland",
+];
 
 export default function Dashboard() {
   const { businessId } = useAuth();
@@ -36,6 +51,13 @@ export default function Dashboard() {
   const [knowledgeScanUrl, setKnowledgeScanUrl] = useState("");
   const [scanningKnowledge, setScanningKnowledge] = useState(false);
   const [knowledgeError, setKnowledgeError] = useState("");
+
+  const [testingCrm, setTestingCrm] = useState(false);
+
+  const [faqSearch, setFaqSearch] = useState("");
+  const [openFaqs, setOpenFaqs] = useState(() => new Set());
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  const [crmTestResult, setCrmTestResult] = useState(null);
 
   useEffect(() => {
     api.get("/business/me").then((res) => setBusiness(res.data));
@@ -58,6 +80,13 @@ export default function Dashboard() {
     return () => observer.disconnect();
   }, [business]);
 
+  useEffect(() => {
+    const onScroll = () => setShowBackToTop(window.scrollY > 480);
+    window.addEventListener("scroll", onScroll);
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   const updateField = (field, value) => {
     setBusiness((prev) => ({ ...prev, [field]: value }));
   };
@@ -76,7 +105,7 @@ export default function Dashboard() {
         tone: res.data.tone || prev.tone,
         website: websiteUrl,
       }));
-      flashMsg("Auto-filled from your website — review below and save.");
+      flashMsg("Auto-filled from your website. Review it below and hit save.");
     } catch (err) {
       alert(err.response?.data?.error || "Could not analyze that website");
     } finally {
@@ -104,6 +133,7 @@ export default function Dashboard() {
         welcomeMessage: business.welcomeMessage,
         launcherPosition: business.launcherPosition,
         hideBranding: business.hideBranding,
+        crmWebhookUrl: business.crmWebhookUrl,
       };
       const res = await api.put("/business/me", payload);
       setBusiness(res.data);
@@ -123,6 +153,11 @@ export default function Dashboard() {
     const res = await api.post("/business/logo", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
+    setBusiness((prev) => ({ ...prev, logoUrl: res.data.logoUrl }));
+  };
+
+  const removeLogo = async () => {
+    const res = await api.delete("/business/logo");
     setBusiness((prev) => ({ ...prev, logoUrl: res.data.logoUrl }));
   };
 
@@ -160,6 +195,23 @@ export default function Dashboard() {
   const removeCta = (i) =>
     updateField("ctaLinks", business.ctaLinks.filter((_, idx) => idx !== i));
 
+  const updateDaySchedule = (dayKey, field, value) => {
+    const schedule = { ...(business.businessHours?.schedule || {}) };
+    schedule[dayKey] = { ...(schedule[dayKey] || {}), [field]: value };
+    updateField("businessHours", { ...business.businessHours, schedule });
+  };
+
+  const saveHours = async () => {
+    setSaving(true);
+    try {
+      const res = await api.put("/business/me", { businessHours: business.businessHours, awayMessage: business.awayMessage });
+      setBusiness((prev) => ({ ...prev, businessHours: res.data.businessHours, awayMessage: res.data.awayMessage }));
+      flashMsg("Business hours saved.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const saveFaqs = async () => {
     setSaving(true);
     const res = await api.put("/business/faqs", { faqs: business.faqs });
@@ -167,14 +219,34 @@ export default function Dashboard() {
     setSaving(false);
     flashMsg("FAQs saved.");
   };
-  const addFaq = () => updateField("faqs", [...business.faqs, { question: "", answer: "" }]);
+  const addFaq = () => {
+    const newIndex = business.faqs.length;
+    updateField("faqs", [...business.faqs, { question: "", answer: "" }]);
+    setOpenFaqs((prev) => new Set(prev).add(newIndex));
+  };
   const updateFaq = (i, field, val) => {
     const copy = [...business.faqs];
     copy[i][field] = val;
     updateField("faqs", copy);
   };
-  const removeFaq = (i) =>
+  const toggleFaqOpen = (i) => {
+    setOpenFaqs((prev) => {
+      const next = new Set(prev);
+      next.has(i) ? next.delete(i) : next.add(i);
+      return next;
+    });
+  };
+  const removeFaq = (i) => {
     updateField("faqs", business.faqs.filter((_, idx) => idx !== i));
+    setOpenFaqs((prev) => {
+      const next = new Set();
+      prev.forEach((idx) => {
+        if (idx < i) next.add(idx);
+        else if (idx > i) next.add(idx - 1);
+      });
+      return next;
+    });
+  };
 
   const addManualKnowledge = async () => {
     if (!knowledgeContent.trim()) return;
@@ -221,6 +293,44 @@ export default function Dashboard() {
     }
   };
 
+  const [faqSuggestions, setFaqSuggestions] = useState({});
+  const [suggestingEntryId, setSuggestingEntryId] = useState(null);
+
+  const suggestFaqsForEntry = async (entryId) => {
+    setSuggestingEntryId(entryId);
+    try {
+      const res = await api.post(`/business/knowledge/${entryId}/suggest-faqs`);
+      setFaqSuggestions((prev) => ({ ...prev, [entryId]: res.data.suggestions }));
+    } catch (err) {
+      flashMsg(err.response?.data?.error || "Could not generate suggestions.");
+    } finally {
+      setSuggestingEntryId(null);
+    }
+  };
+
+  const addSuggestedFaq = async (entryId, index, item) => {
+    await api.post("/business/faqs/promote", { question: item.question, answer: item.answer });
+    setFaqSuggestions((prev) => ({
+      ...prev,
+      [entryId]: prev[entryId].filter((_, i) => i !== index),
+    }));
+    flashMsg("FAQ added.");
+  };
+
+  const saveAndTestCrm = async () => {
+    setTestingCrm(true);
+    setCrmTestResult(null);
+    try {
+      await api.put("/business/me", { crmWebhookUrl: business.crmWebhookUrl });
+      await api.post("/business/crm/test");
+      setCrmTestResult({ ok: true, msg: "Test lead sent. Go check your CRM." });
+    } catch (err) {
+      setCrmTestResult({ ok: false, msg: err.response?.data?.error || "Could not reach that URL." });
+    } finally {
+      setTestingCrm(false);
+    }
+  };
+
   const embedCode = `<script src="${API_ORIGIN}/widget.js" data-business="${businessId}"></script>`;
 
   const copyEmbed = () => {
@@ -254,21 +364,27 @@ export default function Dashboard() {
   const ctaCount = (business.ctaLinks || []).filter((c) => c.label && c.url).length;
   const knowledgeCount = (business.knowledgeBase || []).length;
   const canRemoveBranding = !["trial", "starter"].includes(business.plan);
+  const canUseCrm = !["trial", "starter"].includes(business.plan);
 
   return (
     <div style={layout.shell} className="forge-shell">
       <style>{globalStyles}</style>
       <Sidebar setupSections={SETUP_SECTIONS} activeSection={activeSection} onSectionClick={setActiveSection} />
 
-      <main style={layout.main(780)} className="forge-main">
-        <header style={s.pageHeader}>
-          <div>
-            <div style={s.eyebrow}>Workspace settings</div>
-            <h1 style={s.pageTitle}>Set up your AI assistant</h1>
-            <p style={s.pageSubtitle}>Everything your chatbot knows and shows, in one place.</p>
+      <div style={layout.content}>
+        <div className="forge-topbar">
+          <div style={s.topbarInner} className="forge-topbar-inner">
+            <div>
+              <div style={s.eyebrow}>Workspace settings</div>
+              <h1 style={s.topbarTitle}>Set up your AI assistant</h1>
+            </div>
+            {savedMsg && <div style={s.toast}>✓ {savedMsg}</div>}
           </div>
-          {savedMsg && <div style={s.toast}>✓ {savedMsg}</div>}
-        </header>
+        </div>
+
+        <div style={s.pageBody}>
+        <main style={s.mainCol} className="forge-main forge-main-col">
+        <p style={s.pageSubtitle}>Everything your chatbot knows and shows, in one place.</p>
 
         <div style={s.forgeMeter}>
           <div style={s.forgeMeterTop}>
@@ -302,6 +418,7 @@ export default function Dashboard() {
             icon="bolt"
             title="Quick start from your website"
             desc="Drop in your homepage URL and we'll draft your business description, services, and tone for you."
+            info="This just saves you typing. Paste your website link and we'll read it to fill in the fields below for you. You can still edit anything it gets wrong."
           >
             <div style={s.inlineRow}>
               <input
@@ -319,7 +436,13 @@ export default function Dashboard() {
         </section>
 
         <section id="profile" style={s.section}>
-          <SectionCard step="02" icon="briefcase" title="Business profile" desc="This is what your AI assistant knows about you.">
+          <SectionCard
+            step="02"
+            icon="briefcase"
+            title="Business profile"
+            desc="This is what your AI assistant knows about you."
+            info="Everything you fill in here is what your chatbot actually knows about your business. If it's blank or wrong, your chatbot won't be able to answer customers correctly."
+          >
             <Field label="Business name">
               <input className="forge-input" style={s.input} value={business.name} onChange={(e) => updateField("name", e.target.value)} />
             </Field>
@@ -360,14 +483,25 @@ export default function Dashboard() {
         </section>
 
         <section id="branding" style={s.section}>
-          <SectionCard step="03" icon="palette" title="Branding" desc="Make the widget look like it belongs on your site.">
+          <SectionCard
+            step="03"
+            icon="palette"
+            title="Branding"
+            desc="Make the widget look like it belongs on your site."
+            info="This controls how the chat widget looks to your visitors: your logo, colors, the first message it shows, and which corner of the screen it sits in."
+          >
             <div style={s.twoCol}>
               <Field label="Logo">
                 <div style={s.logoUploadRow}>
-                  <div style={s.logoPreviewBox}>
+                  <div className="forge-logo-box" style={s.logoPreviewBox}>
                     {business.logoUrl
                       ? <img src={`${API_ORIGIN}${business.logoUrl}`} alt="Logo preview" style={s.logoPreviewImg} />
                       : <span style={s.logoPlaceholder}>{initial}</span>}
+                    {business.logoUrl && (
+                      <button className="forge-logo-remove" onClick={removeLogo} aria-label="Remove logo" title="Remove logo">
+                        <CloseIcon />
+                      </button>
+                    )}
                   </div>
                   <label className="forge-ghost" style={s.uploadBtn}>
                      Upload
@@ -414,7 +548,7 @@ export default function Dashboard() {
               ) : (
                 <div style={s.toggleRow}>
                   <span style={s.toggleLabel}>Shown on your widget</span>
-                  <Link to="/billing" style={s.upgradeLink}>Available on Growth and Pro plans — Upgrade →</Link>
+                  <Link to="/billing" style={s.upgradeLink}>Available on the Growth and Pro plans. Upgrade →</Link>
                 </div>
               )}
             </Field>
@@ -444,7 +578,7 @@ export default function Dashboard() {
 
               <Field label="Launcher icon">
                 <div style={s.logoUploadRow}>
-                  <div style={s.logoPreviewBox}>
+                  <div className="forge-logo-box" style={s.logoPreviewBox}>
                     {business.launcherType === "image" && business.launcherMediaUrl ? (
                       <img src={`${API_ORIGIN}${business.launcherMediaUrl}`} alt="Launcher preview" style={s.logoPreviewImg} />
                     ) : business.launcherType === "video" && business.launcherMediaUrl ? (
@@ -452,43 +586,163 @@ export default function Dashboard() {
                     ) : (
                       <span style={s.logoPlaceholder}>💬</span>
                     )}
+                    {business.launcherType && business.launcherType !== "default" && (
+                      <button className="forge-logo-remove" onClick={removeLauncherMedia} aria-label="Reset to default icon" title="Reset to default icon">
+                        <CloseIcon />
+                      </button>
+                    )}
                   </div>
                   <label className="forge-ghost" style={s.uploadBtn}>
                     Upload image / video
                     <input type="file" accept=" image/*,video/*" onChange={uploadLauncherMedia} style={{ display: "none" }} />
                   </label>
                 </div>
-                {business.launcherType && business.launcherType !== "default" && (
-                  <button className="forge-ghost" style={{ ...s.ghostBtn, marginTop: 8 }} onClick={removeLauncherMedia}>
-                    Reset to default icon
-                  </button>
-                )}
               </Field>
+            </div>
+
+            <div style={s.cardFooterEnd}>
+              <button className="forge-btn-primary" style={s.primaryBtn} onClick={saveProfile} disabled={saving}>
+                {saving ? "Saving…" : "Save profile & branding"}
+              </button>
             </div>
           </SectionCard>
         </section>
 
-        <div style={s.stickyBar}>
-          <button className="forge-btn-primary-lg" style={s.primaryBtnLg} onClick={saveProfile} disabled={saving}>
-            {saving ? "Saving…" : "Save profile & branding"}
-          </button>
-        </div>
+        <section id="hours" style={s.section}>
+          <SectionCard
+            step="04"
+            icon="clock"
+            title="Business hours"
+            desc="Show visitors when your team is online, and switch to an away message outside those hours."
+            info="Turn this on if you want the widget to show 'Currently away' and a different message outside your work hours. Leave it off if you want the bot to always feel available."
+          >
+            <label style={s.toggleRow}>
+              <span className="forge-toggle">
+                <input
+                  type="checkbox"
+                  checked={business.businessHours?.enabled || false}
+                  onChange={(e) => updateField("businessHours", { ...business.businessHours, enabled: e.target.checked })}
+                />
+                <span className="forge-toggle-track" />
+              </span>
+              <span style={s.toggleLabel}>
+                {business.businessHours?.enabled ? "Enabled" : "Disabled — widget always shows as online"}
+              </span>
+            </label>
+
+            {business.businessHours?.enabled && (
+              <>
+                <Field label="Timezone">
+                  <select
+                    className="forge-input"
+                    style={s.input}
+                    value={business.businessHours?.timezone || "UTC"}
+                    onChange={(e) => updateField("businessHours", { ...business.businessHours, timezone: e.target.value })}
+                  >
+                    {TIMEZONES.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
+                  </select>
+                </Field>
+
+                <Field label="Hours">
+                  <div style={s.hoursGrid}>
+                    {DAYS.map(([key, label]) => {
+                      const day = business.businessHours?.schedule?.[key] || { open: "09:00", close: "17:00", closed: false };
+                      return (
+                        <div key={key} style={s.hoursRow}>
+                          <span style={s.hoursDayLabel}>{label}</span>
+                          <label style={s.hoursClosedToggle}>
+                            <input type="checkbox" checked={!day.closed} onChange={(e) => updateDaySchedule(key, "closed", !e.target.checked)} />
+                            Open
+                          </label>
+                          {!day.closed ? (
+                            <>
+                              <input type="time" className="forge-input" style={s.hoursTimeInput} value={day.open} onChange={(e) => updateDaySchedule(key, "open", e.target.value)} />
+                              <span style={s.hoursDash}>–</span>
+                              <input type="time" className="forge-input" style={s.hoursTimeInput} value={day.close} onChange={(e) => updateDaySchedule(key, "close", e.target.value)} />
+                            </>
+                          ) : (
+                            <span style={s.hoursClosedLabel}>Closed all day</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Field>
+
+                <Field label="Away message">
+                  <textarea
+                    className="forge-input"
+                    style={{ ...s.input, height: 60, resize: "vertical" }}
+                    value={business.awayMessage || ""}
+                    onChange={(e) => updateField("awayMessage", e.target.value)}
+                    placeholder="We're currently offline. Leave your details and we'll get back to you."
+                  />
+                </Field>
+              </>
+            )}
+
+            <div style={s.cardFooterEnd}>
+              <button className="forge-btn-primary" style={s.primaryBtn} onClick={saveHours} disabled={saving}>
+                {saving ? "Saving…" : "Save business hours"}
+              </button>
+            </div>
+          </SectionCard>
+        </section>
 
         <section id="faqs" style={s.section}>
           <SectionCard
-            step="04"
+            step="05"
             icon="help"
             title="FAQs"
             desc="Matched instantly with no AI cost. Anything outside these falls back to the AI assistant."
+            info="Add questions your customers ask often, along with the exact answer. If a visitor asks something close to one of these, they get this answer instantly, for free. Anything else goes to the AI."
           >
-            {business.faqs.map((f, i) => (
-              <div key={i} className="forge-card" style={s.faqCard}>
-                <input className="forge-input" style={s.input} placeholder="Question" value={f.question} onChange={(e) => updateFaq(i, "question", e.target.value)} />
-                <textarea className="forge-input" style={{ ...s.input, height: 56, marginTop: 8, resize: "vertical" }} placeholder="Answer" value={f.answer} onChange={(e) => updateFaq(i, "answer", e.target.value)} />
-                <button style={s.faqRemove} onClick={() => removeFaq(i)}>Remove FAQ</button>
-              </div>
-            ))}
-            <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
+            {business.faqs.length > 5 && (
+              <input
+                className="forge-input"
+                style={{ ...s.input, marginBottom: 12 }}
+                placeholder={`Search ${business.faqs.length} FAQs…`}
+                value={faqSearch}
+                onChange={(e) => setFaqSearch(e.target.value)}
+              />
+            )}
+
+            {(() => {
+              const query = faqSearch.trim().toLowerCase();
+              const visible = business.faqs
+                .map((f, i) => i)
+                .filter((i) => {
+                  if (!query) return true;
+                  const f = business.faqs[i];
+                  return (f.question || "").toLowerCase().includes(query) || (f.answer || "").toLowerCase().includes(query);
+                });
+
+              if (!visible.length) {
+                return <div style={s.faqEmptyState}>No FAQs match "{faqSearch}".</div>;
+              }
+
+              return visible.map((i) => {
+                const f = business.faqs[i];
+                const isOpen = openFaqs.has(i);
+                return (
+                  <div key={i} className="forge-card" style={s.faqCard}>
+                    <button type="button" className="forge-ghost" style={s.faqRowHead} onClick={() => toggleFaqOpen(i)}>
+                      <span style={s.faqRowQuestion}>{f.question || "Untitled question"}</span>
+                      <span style={{ ...s.faqChevron, transform: isOpen ? "rotate(180deg)" : "none" }}><ChevronIcon /></span>
+                    </button>
+                    {isOpen && (
+                      <div style={{ marginTop: 10 }}>
+                        <input className="forge-input" style={s.input} placeholder="Question" value={f.question} onChange={(e) => updateFaq(i, "question", e.target.value)} />
+                        <textarea className="forge-input" style={{ ...s.input, height: 56, marginTop: 8, resize: "vertical" }} placeholder="Answer" value={f.answer} onChange={(e) => updateFaq(i, "answer", e.target.value)} />
+                        <button style={s.faqRemove} onClick={() => removeFaq(i)}>Remove FAQ</button>
+                      </div>
+                    )}
+                  </div>
+                );
+              });
+            })()}
+
+            <div style={s.cardFooterRow}>
               <button className="forge-ghost" style={s.ghostBtn} onClick={addFaq}>+ Add FAQ</button>
               <button className="forge-btn-primary" style={s.primaryBtn} onClick={saveFaqs}>Save FAQs</button>
             </div>
@@ -497,10 +751,11 @@ export default function Dashboard() {
 
         <section id="knowledge" style={s.section}>
           <SectionCard
-            step="05"
+            step="06"
             icon="book"
             title="Knowledge base"
-            desc="Give the AI more to work with beyond FAQs. Each scan reads one page only — add your About, Services, Pricing, and Contact pages separately for the best results."
+            desc="Give the AI more to work with beyond FAQs. Each scan only reads one page, so add your About, Services, Pricing, and Contact pages one at a time for the best results."
+            info="This is background reading for your AI, separate from FAQs. Scan a page from your site or paste in text (like your pricing or policies), and the AI can use it to answer more detailed questions."
           >
             {knowledgeError && <div style={s.errorBox}>{knowledgeError}</div>}
 
@@ -522,6 +777,34 @@ export default function Dashboard() {
                     <p style={s.knowledgePreview}>
                       {entry.content.slice(0, 200)}{entry.content.length > 200 ? "…" : ""}
                     </p>
+                    <button
+                      className="forge-ghost"
+                      style={{ ...s.ghostBtn, marginTop: 4 }}
+                      onClick={() => suggestFaqsForEntry(entry._id)}
+                      disabled={suggestingEntryId === entry._id}
+                    >
+                      {suggestingEntryId === entry._id ? "Reading…" : "✨ Suggest FAQs from this"}
+                    </button>
+
+                    {faqSuggestions[entry._id]?.length > 0 && (
+                      <div style={{ marginTop: 10 }}>
+                        {faqSuggestions[entry._id].map((item, i) => (
+                          <div key={i} style={s.suggestionRow}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={s.suggestionQuestion}>{item.question}</div>
+                              <div style={s.suggestionAnswer}>{item.answer}</div>
+                            </div>
+                            <button
+                              className="forge-btn-primary"
+                              style={s.suggestionAddBtn}
+                              onClick={() => addSuggestedFaq(entry._id, i, item)}
+                            >
+                              + Add
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -542,7 +825,7 @@ export default function Dashboard() {
                     {scanningKnowledge ? "Scanning…" : "Scan"}
                   </button>
                 </div>
-                <p style={s.knowledgeHint}>One page per scan — this only reads the exact URL you enter, not your whole site.</p>
+                <p style={s.knowledgeHint}>One page per scan. This only reads the exact URL you enter, not your whole site.</p>
               </div>
 
               <div style={s.knowledgeAddCol}>
@@ -569,8 +852,54 @@ export default function Dashboard() {
           </SectionCard>
         </section>
 
+        <section id="crm" style={s.section}>
+          <SectionCard
+            step="07"
+            icon="link"
+            title="CRM integration"
+            desc="Send every new lead straight to your CRM, so nobody has to export anything by hand."
+            info="Optional. If you use a CRM, paste its webhook link here (most CRMs and tools like Zapier can give you one). Every new lead your chatbot collects will be sent there automatically."
+          >
+            {canUseCrm ? (
+              <Field label="CRM webhook URL">
+                <div style={s.inlineRow}>
+                  <input
+                    className="forge-input"
+                    style={s.input}
+                    placeholder="https://hooks.zapier.com/hooks/catch/…"
+                    value={business.crmWebhookUrl || ""}
+                    onChange={(e) => { updateField("crmWebhookUrl", e.target.value); setCrmTestResult(null); }}
+                  />
+                  <button className="forge-btn-primary" style={s.primaryBtn} onClick={saveAndTestCrm} disabled={testingCrm || !business.crmWebhookUrl}>
+                    {testingCrm ? "Testing…" : "Save & test"}
+                  </button>
+                </div>
+                <p style={s.knowledgeHint}>
+                  Works with any CRM through its native "incoming webhook" step (or a Zapier / Make webhook trigger). We'll send each new lead here as JSON, with their name, email, and phone.
+                </p>
+                {crmTestResult && (
+                  <div style={{ ...(crmTestResult.ok ? s.toast : s.errorBox), marginTop: 10 }}>
+                    {crmTestResult.ok ? "✓ " : ""}{crmTestResult.msg}
+                  </div>
+                )}
+              </Field>
+            ) : (
+              <div style={s.toggleRow}>
+                <span style={s.toggleLabel}>Automatically send new leads to your CRM</span>
+                <Link to="/billing" style={s.upgradeLink}>Available on the Growth and Pro plans. Upgrade →</Link>
+              </div>
+            )}
+          </SectionCard>
+        </section>
+
         <section id="embed" style={s.section}>
-          <SectionCard step="06" icon="code" title="Install on your website" desc="Paste this once, right before the closing </body> tag.">
+          <SectionCard
+            step="08"
+            icon="code"
+            title="Install on your website"
+            desc="Paste this once, right before the closing </body> tag."
+            info="This one code snippet is what actually makes your chatbot appear on your website. Copy it and give it to whoever manages your site (or paste it in yourself if you can edit the site's code)."
+          >
             <div style={s.codeBoxWrap}>
               <div style={s.codeBoxTag}>WIDGET · EMBED</div>
               <div style={s.codeBox}>
@@ -580,15 +909,39 @@ export default function Dashboard() {
             <button className="forge-ghost" style={s.ghostBtn} onClick={copyEmbed}>{copied ? "Copied ✓" : "Copy code"}</button>
           </SectionCard>
         </section>
-      </main>
+        </main>
+
+        <aside style={s.previewCol} className="forge-preview-col">
+          <WidgetPreview business={business} apiOrigin={API_ORIGIN} />
+        </aside>
+        </div>
+      </div>
+
+      {showBackToTop && (
+        <button
+          className="forge-back-to-top forge-fade-up"
+          style={s.backToTop}
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          aria-label="Back to top"
+          title="Back to top"
+        >
+          <ArrowUpIcon />
+        </button>
+      )}
     </div>
   );
 }
 
-function SectionCard({ step, icon, title, desc, children }) {
+function SectionCard({ step, icon, title, desc, info, children }) {
   return (
     <div className="forge-card" style={s.card}>
       <div style={s.cardAccentBar} />
+      {info && (
+        <span className="forge-info" style={s.infoTrigger}>
+          <span className="forge-info-icon">i</span>
+          <span className="forge-info-bubble">{info}</span>
+        </span>
+      )}
       <div style={s.cardHead}>
         <div style={s.cardHeadTop}>
           {icon && (
@@ -629,10 +982,40 @@ function StatChip({ icon, label, value, muted }) {
   );
 }
 
+function CloseIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ChevronIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+      <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ArrowUpIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function NavIcon({ name, size = 15 }) {
   const common = { stroke: "currentColor", strokeWidth: 1.8, fill: "none", strokeLinecap: "round", strokeLinejoin: "round" };
   const icons = {
     bolt: <path {...common} d="M13 2 3 14h7l-1 8 10-12h-7l1-8z" />,
+    clock: (
+      <g {...common}>
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 6v6l4 2" />
+      </g>
+    ),
     briefcase: (
       <g {...common}>
         <rect x="2" y="7" width="20" height="14" rx="2.5" />
@@ -711,13 +1094,17 @@ function stageLabel(pct) {
 }
 
 const s = {
-  pageHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 },
-  eyebrow: { fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: color.inkFaint, fontWeight: 600, marginBottom: 4, fontFamily: "'JetBrains Mono', monospace" },
-  pageTitle: { fontSize: 25, fontWeight: 700, letterSpacing: "-0.02em", margin: 0, fontFamily: "'Space Grotesk', sans-serif" },
-  pageSubtitle: { fontSize: 13, color: color.inkSoft, margin: "6px 0 0" },
-  toast: { background: color.successSoft, color: color.successText, padding: "8px 14px", borderRadius: 8, fontSize: 12.5, fontWeight: 600, alignSelf: "center" },
+  topbarInner: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 40px", maxWidth: 1200, margin: "0 auto" },
+  eyebrow: { fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: color.inkFaint, fontWeight: 600, marginBottom: 2, fontFamily: "'JetBrains Mono', monospace" },
+  topbarTitle: { fontSize: 18, fontWeight: 700, letterSpacing: "-0.01em", margin: 0, fontFamily: "'Space Grotesk', sans-serif" },
+  pageSubtitle: { fontSize: 13, color: color.inkSoft, margin: "0 0 20px" },
+  toast: { background: color.successSoft, color: color.successText, padding: "8px 14px", borderRadius: radius.sm, fontSize: 12.5, fontWeight: 600, alignSelf: "center" },
 
-  forgeMeter: { background: color.surface, border: `1px solid ${color.border}`, borderRadius: 12, padding: "14px 16px", marginBottom: 24 },
+  pageBody: { display: "flex", gap: 32, alignItems: "stretch", maxWidth: 1200, margin: "0 auto", padding: "28px 40px 100px", boxSizing: "border-box" },
+  mainCol: { flex: 1, minWidth: 0 },
+  previewCol: { width: 300, flex: "0 0 300px" },
+
+  forgeMeter: { background: color.surface, border: `1px solid ${color.border}`, borderRadius: radius.md, padding: "14px 16px", marginBottom: 24, boxShadow: shadow.sm },
   forgeMeterTop: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 9 },
   forgeMeterLabel: { fontSize: 12.5, fontWeight: 600, color: color.ink },
   forgeMeterPct: { fontSize: 11.5, fontFamily: "'JetBrains Mono', monospace", color: color.inkSoft, textTransform: "lowercase" },
@@ -734,8 +1121,9 @@ const s = {
   statChipLabel: { fontSize: 11, color: color.inkSoft },
 
   section: { marginBottom: 22 },
-  card: { position: "relative", background: color.surface, border: `1px solid ${color.border}`, borderRadius: 14, padding: "24px 24px 24px 28px", boxShadow: "0 1px 2px rgba(0,0,0,.02)", overflow: "hidden" },
+  card: { position: "relative", background: color.surface, border: `1px solid ${color.border}`, borderRadius: radius.lg, padding: "24px 24px 24px 28px", boxShadow: shadow.sm, overflow: "hidden" },
   cardAccentBar: { position: "absolute", left: 0, top: 0, bottom: 0, width: 4, background: color.accent },
+  infoTrigger: { position: "absolute", top: 20, right: 20 },
   cardHead: {},
   cardHeadTop: { display: "flex", alignItems: "center", gap: 10, marginBottom: 7 },
   cardIconBadge: { width: 28, height: 28, borderRadius: 8, background: color.accentSoft, color: color.accentDeep, display: "flex", alignItems: "center", justifyContent: "center", flex: "0 0 auto" },
@@ -763,20 +1151,38 @@ const s = {
   colorRow: { display: "flex", alignItems: "center", gap: 10 },
   colorSwatch: { width: 44, height: 40, border: `1px solid ${color.border}`, borderRadius: 8, cursor: "pointer", padding: 2, background: "#fff" },
   colorHex: { fontSize: 13, fontFamily: "'JetBrains Mono', monospace", color: color.inkSoft },
-  toggleRow: { display: "flex", alignItems: "center", gap: 10, cursor: "pointer" },
+  toggleRow: { display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginBottom: 16 },
   toggleLabel: { fontSize: 13, color: color.inkSoft },
+
+  hoursGrid: { display: "flex", flexDirection: "column", gap: 6 },
+  hoursRow: { display: "flex", alignItems: "center", gap: 12, padding: "8px 10px", background: "#FBFBFD", border: `1px solid ${color.borderSoft}`, borderRadius: 8 },
+  hoursDayLabel: { fontSize: 12.5, fontWeight: 600, color: color.ink, width: 84, flex: "0 0 auto" },
+  hoursClosedToggle: { display: "flex", alignItems: "center", gap: 5, fontSize: 11.5, color: color.inkSoft, flex: "0 0 auto" },
+  hoursTimeInput: { width: 110, padding: "6px 8px", fontSize: 12.5 },
+  hoursDash: { color: color.inkFaint, fontSize: 12 },
+  hoursClosedLabel: { fontSize: 11.5, color: color.inkFaint, fontStyle: "italic" },
   upgradeLink: { fontSize: 12.5, color: color.accent, fontWeight: 600, textDecoration: "none" },
 
   ctaList: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 8 },
   ctaRow: { display: "flex", gap: 8 },
 
-  faqCard: { border: `1px solid ${color.borderSoft}`, borderRadius: 10, padding: 14, marginBottom: 12, background: "#FBFBFD" },
+  faqCard: { border: `1px solid ${color.borderSoft}`, borderRadius: 10, padding: 14, marginBottom: 10, background: "#FBFBFD" },
   faqRemove: { marginTop: 0, background: "none", border: "none", color: color.danger, fontSize: 12, cursor: "pointer", padding: 0, textDecoration: "underline", flex: "0 0 auto" },
+  faqRowHead: { width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left", font: "inherit" },
+  faqRowQuestion: { fontSize: 13.5, fontWeight: 600, color: color.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  faqChevron: { flex: "0 0 auto", color: color.inkFaint, transition: "transform .15s ease" },
+  faqEmptyState: { fontSize: 13, color: color.inkFaint, padding: "18px 0", textAlign: "center" },
+
+  backToTop: { position: "fixed", right: 28, bottom: 28, width: 42, height: 42, borderRadius: "50%", background: color.ink, color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 8px 22px -6px rgba(0,0,0,.4)", zIndex: 40 },
 
   errorBox: { background: color.dangerSoft, color: color.danger, padding: "9px 12px", borderRadius: 8, fontSize: 12.5, marginBottom: 14, fontWeight: 600 },
 
   knowledgeCount: { fontSize: 11.5, color: color.inkFaint, fontFamily: "'JetBrains Mono', monospace", marginBottom: 14 },
   knowledgeCard: { border: `1px solid ${color.borderSoft}`, borderRadius: 10, padding: 14, marginBottom: 10, background: "#FBFBFD" },
+  suggestionRow: { display: "flex", alignItems: "flex-start", gap: 10, padding: 10, background: "#fff", border: `1px solid ${color.borderSoft}`, borderRadius: 8, marginTop: 6 },
+  suggestionQuestion: { fontSize: 12.5, fontWeight: 600, color: color.ink, marginBottom: 2 },
+  suggestionAnswer: { fontSize: 11.5, color: color.inkSoft, lineHeight: 1.45 },
+  suggestionAddBtn: { flex: "0 0 auto", padding: "6px 12px", fontSize: 11.5, whiteSpace: "nowrap" },
   knowledgeCardHead: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 6 },
   knowledgeTitle: { fontSize: 13.5, fontWeight: 600, color: color.ink, marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
   knowledgePreview: { fontSize: 12.5, color: color.inkSoft, margin: 0, lineHeight: 1.5 },
@@ -789,9 +1195,10 @@ const s = {
   knowledgeHint: { fontSize: 11, color: color.inkFaint, margin: "8px 0 0", lineHeight: 1.5 },
 
   primaryBtn: { background: color.accent, color: "#fff", border: "none", padding: "10px 18px", borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" },
-  primaryBtnLg: { background: color.accentDeep, color: "#fff", border: "none", padding: "12px 26px", borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: "pointer" },
   ghostBtn: { background: color.borderSoft, border: "none", padding: "8px 16px", borderRadius: 8, cursor: "pointer", fontSize: 12.5, fontWeight: 600, color: color.ink },
   stickyBar: { display: "flex", justifyContent: "flex-end", marginBottom: 30 },
+  cardFooterRow: { display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16, paddingTop: 16, borderTop: `1px solid ${color.borderSoft}` },
+  cardFooterEnd: { display: "flex", justifyContent: "flex-end", marginTop: 16, paddingTop: 16, borderTop: `1px solid ${color.borderSoft}` },
 
   codeBoxWrap: { marginBottom: 12 },
   codeBoxTag: { fontSize: 10, letterSpacing: "0.1em", color: color.inkFaint, fontFamily: "'JetBrains Mono', monospace", marginBottom: 6 },

@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Chat = require("../models/Chat");
 const Message = require("../models/Message");
 const Business = require("../models/Business");
@@ -5,6 +6,32 @@ const User = require("../models/User");
 const { countConversationIfNew } = require("../utils/conversationCounter");
 const { resetIfNewMonth } = require("../utils/monthlyReset");
 const { hasFeature, getPlanConfig } = require("../utils/planConfig");
+const { isBusinessOpen } = require("../utils/businessHours");
+
+// Picks the teammate with the fewest currently-active chats. Ties go to whoever
+// Mongo returns first (no further tiebreaker needed — this only has to be "fair
+// enough", not perfectly deterministic).
+async function pickLeastBusyAgent(businessId) {
+  const teamMembers = await User.find({ businessId }).select("_id name");
+  if (!teamMembers.length) return null;
+
+  const activeCounts = await Chat.aggregate([
+    { $match: { businessId: new mongoose.Types.ObjectId(businessId), status: "active" } },
+    { $group: { _id: "$assignedTo", count: { $sum: 1 } } },
+  ]);
+  const countByAgent = new Map(activeCounts.map((c) => [String(c._id), c.count]));
+
+  let leastBusy = teamMembers[0];
+  let minCount = countByAgent.get(String(leastBusy._id)) || 0;
+  for (const member of teamMembers) {
+    const count = countByAgent.get(String(member._id)) || 0;
+    if (count < minCount) {
+      minCount = count;
+      leastBusy = member;
+    }
+  }
+  return leastBusy;
+}
 
 // PUBLIC — widget creates a new chat
 exports.createChat = async (req, res) => {
@@ -17,6 +44,9 @@ exports.createChat = async (req, res) => {
     if (!hasFeature(business, "liveChat")) {
       return res.json({ error: "live_chat_unavailable", message: "Live chat isn't available on this plan." });
     }
+    if (!isBusinessOpen(business)) {
+      return res.json({ error: "outside_hours", message: business.awayMessage });
+    }
 
     await resetIfNewMonth(business);
     await countConversationIfNew(business, sessionId);
@@ -27,14 +57,28 @@ exports.createChat = async (req, res) => {
       return res.json({ error: "conversation_limit_reached", message: "This business has reached its monthly conversation limit. Please try again later." });
     }
 
-    const chat = await Chat.create({
+    const chatData = {
       businessId,
       visitorName: name || "Website visitor",
       visitorEmail: email || "",
       visitorPhone: phone || "",
-    });
+    };
 
-    req.app.get("io").to(`business_${businessId}`).emit("refresh");
+    if (business.autoAssignChats) {
+      const assignee = await pickLeastBusyAgent(businessId);
+      if (assignee) {
+        chatData.status = "active";
+        chatData.assignedTo = assignee._id;
+        chatData.assignedToName = assignee.name;
+        chatData.acceptedAt = new Date();
+      }
+    }
+
+    const chat = await Chat.create(chatData);
+
+    const io = req.app.get("io");
+    io.to(`business_${businessId}`).emit("refresh");
+    if (chat.assignedTo) io.to(`chat_${chat._id}`).emit("chat_updated", chat);
     res.json({ chatId: chat._id });
   } catch (err) {
     console.error(err);

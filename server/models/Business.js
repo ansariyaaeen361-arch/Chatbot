@@ -42,6 +42,33 @@ const businessSchema = new mongoose.Schema({
     default: false,
   },
 
+  crmWebhookUrl: {
+    type: String,
+    default: "",
+  },
+
+  businessHours: {
+    enabled: { type: Boolean, default: false },
+    timezone: { type: String, default: "UTC" },
+    schedule: {
+      mon: { open: { type: String, default: "09:00" }, close: { type: String, default: "17:00" }, closed: { type: Boolean, default: false } },
+      tue: { open: { type: String, default: "09:00" }, close: { type: String, default: "17:00" }, closed: { type: Boolean, default: false } },
+      wed: { open: { type: String, default: "09:00" }, close: { type: String, default: "17:00" }, closed: { type: Boolean, default: false } },
+      thu: { open: { type: String, default: "09:00" }, close: { type: String, default: "17:00" }, closed: { type: Boolean, default: false } },
+      fri: { open: { type: String, default: "09:00" }, close: { type: String, default: "17:00" }, closed: { type: Boolean, default: false } },
+      sat: { open: { type: String, default: "09:00" }, close: { type: String, default: "17:00" }, closed: { type: Boolean, default: true } },
+      sun: { open: { type: String, default: "09:00" }, close: { type: String, default: "17:00" }, closed: { type: Boolean, default: true } },
+    },
+  },
+  awayMessage: {
+    type: String,
+    default: "We're currently offline. Leave your details and we'll get back to you as soon as we're back.",
+  },
+  autoAssignChats: {
+    type: Boolean,
+    default: false,
+  },
+
   description: {
     type: String,
     default: "",
@@ -104,6 +131,7 @@ const businessSchema = new mongoose.Schema({
     default: 10,
   },
   monthlySpendUsed: { type: Number, default: 0 },
+  spendWarningSent: { type: Boolean, default: false },
   monthlyConversationsUsed: { type: Number, default: 0 },
   spendResetAt: { type: Date, default: Date.now },
 

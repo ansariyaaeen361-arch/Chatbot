@@ -1,0 +1,17 @@
+{
+  "sidebar": {
+    "setup": "Penyiapan",
+    "workspace": "Ruang Kerja",
+    "liveChatInbox": "Kotak masuk obrolan langsung",
+    "team": "Tim",
+    "analytics": "Analitik",
+    "billing": "Penagihan",
+    "yourBusiness": "usaha Anda?",
+    "plan": "RENCANA",
+    "accountSettings": "Pengaturan akun",
+    "signOut": "Sign out",
+    "openMenu": "Buka menu",
+    "closeMenu": "Tutup Menu",
+    "language": "Bahasa"
+  }
+}

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import api from "../api/axios";
 import Sidebar from "../components/Sidebar";
+import BackToDashboard from "../components/BackToDashboard";
 import { color, layout, globalStyles } from "../theme";
 
 const PLANS = [
@@ -26,7 +27,7 @@ export default function Billing() {
   useEffect(() => {
     loadStatus();
     const params = new URLSearchParams(window.location.search);
-    if (params.get("canceled")) setMsg("Checkout was canceled — no changes made.");
+    if (params.get("canceled")) setMsg("Checkout was canceled. Nothing was changed.");
     if (params.get("success")) setMsg("Subscription updated successfully.");
 
     const preselectedPlan = params.get("plan");
@@ -88,6 +89,7 @@ export default function Billing() {
       <Sidebar />
 
       <main style={layout.main(900)} className="forge-main">
+        <BackToDashboard />
         <header style={s.header}>
           <div style={s.eyebrow}>Workspace</div>
           <h1 style={s.title}>Billing</h1>

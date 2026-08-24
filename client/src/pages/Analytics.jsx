@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
+import BackToDashboard from "../components/BackToDashboard";
 import api from "../api/axios";
 import { color, layout, globalStyles } from "../theme";
 
@@ -8,6 +9,9 @@ export default function Analytics() {
   const [overview, setOverview] = useState(null);
   const [topQuestions, setTopQuestions] = useState([]);
   const [leads, setLeads] = useState([]);
+  const [missedFaqs, setMissedFaqs] = useState([]);
+  const [agentStats, setAgentStats] = useState([]);
+  const [promotingIndex, setPromotingIndex] = useState(null);
   const [exporting, setExporting] = useState(false);
   const [blocked, setBlocked] = useState(false);
 
@@ -17,7 +21,19 @@ export default function Analytics() {
     });
     api.get("/analytics/top-questions").then((res) => setTopQuestions(res.data)).catch(() => {});
     api.get("/analytics/leads").then((res) => setLeads(res.data)).catch(() => {});
+    api.get("/analytics/missed-faqs").then((res) => setMissedFaqs(res.data)).catch(() => {});
+    api.get("/analytics/agent-stats").then((res) => setAgentStats(res.data)).catch(() => {});
   }, []);
+
+  const promoteToFaq = async (item, index) => {
+    setPromotingIndex(index);
+    try {
+      await api.post("/business/faqs/promote", { question: item.question, answer: item.suggestedAnswer });
+      setMissedFaqs((prev) => prev.filter((_, i) => i !== index));
+    } finally {
+      setPromotingIndex(null);
+    }
+  };
 
   const exportCsv = async () => {
     setExporting(true);
@@ -40,6 +56,7 @@ export default function Analytics() {
         <style>{globalStyles}</style>
         <Sidebar />
         <main style={layout.main(760)} className="forge-main">
+          <BackToDashboard />
           <header style={s.header}>
             <div style={s.eyebrow}>Insights</div>
             <h1 style={s.title}>Analytics</h1>
@@ -72,6 +89,7 @@ export default function Analytics() {
       <Sidebar />
 
       <main style={layout.main(760)} className="forge-main">
+        <BackToDashboard />
         <header style={s.header}>
           <div style={s.eyebrow}>Insights</div>
           <h1 style={s.title}>Analytics</h1>
@@ -84,6 +102,7 @@ export default function Analytics() {
           <StatCard label="Answered by FAQ" value={overview.faqCount} sub={`${overview.faqRate}% of all messages`} highlight />
           <StatCard label="Answered by AI" value={overview.aiCount} />
           <StatCard label="Leads captured" value={overview.leadCount} />
+          <StatCard label="Conversion rate" value={`${overview.conversionRate}%`} sub={`${overview.leadCount} of ${overview.conversationCount} conversations`} />
           <StatCard label="Live chats started" value={overview.liveChatCount} />
           <StatCard
             label="Avg. response time"
@@ -105,6 +124,53 @@ export default function Analytics() {
             ))}
           </div>
         </div>
+
+        {/* ---- Missed FAQ suggestions ---- */}
+        {missedFaqs.length > 0 && (
+          <div className="forge-card" style={s.card}>
+            <h2 style={s.cardTitle}>Missed FAQ suggestions</h2>
+            <p style={s.cardDesc}>Questions the AI keeps answering that aren't in your FAQs yet. Add them for an instant, free reply next time.</p>
+            <div style={s.missedList}>
+              {missedFaqs.map((item, i) => (
+                <div key={i} style={s.missedRow}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={s.missedQuestion}>{item.question}</div>
+                    <div style={s.missedAnswer}>{item.suggestedAnswer}</div>
+                    <div style={s.missedCount}>Asked {item.count}× in the last 30 days</div>
+                  </div>
+                  <button
+                    className="forge-btn-primary"
+                    style={s.missedAddBtn}
+                    onClick={() => promoteToFaq(item, i)}
+                    disabled={promotingIndex === i}
+                  >
+                    {promotingIndex === i ? "Adding…" : "+ Add as FAQ"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ---- Team performance ---- */}
+        {agentStats.length > 0 && (
+          <div className="forge-card" style={s.card}>
+            <h2 style={s.cardTitle}>Team performance</h2>
+            <p style={s.cardDesc}>Live chats handled by each teammate in the last 30 days.</p>
+            <div style={s.agentList}>
+              {agentStats.map((a) => (
+                <div key={a.agentId} style={s.agentRow}>
+                  <div style={s.agentAvatar}>{a.agentName.charAt(0).toUpperCase()}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={s.agentName}>{a.agentName}</div>
+                    <div style={s.agentSub}>{a.chatsHandled} chats · {a.resolvedCount} resolved</div>
+                  </div>
+                  <div style={s.agentResponseTime}>{formatResponseTime(a.avgResponseSeconds)}<span style={s.agentResponseLabel}>avg. response</span></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* ---- Leads ---- */}
         <div className="forge-card" style={s.card}>
@@ -176,6 +242,21 @@ const s = {
   questionRow: { display: "flex", justifyContent: "space-between", padding: "8px 10px", background: "#FBFBFD", borderRadius: 8, fontSize: 13 },
   questionText: { color: color.ink },
   questionCount: { color: color.inkFaint, fontWeight: 600 },
+
+  missedList: { display: "flex", flexDirection: "column", gap: 10 },
+  missedRow: { display: "flex", alignItems: "flex-start", gap: 14, padding: 12, background: "#FBFBFD", border: `1px solid ${color.borderSoft}`, borderRadius: 10 },
+  missedQuestion: { fontSize: 13.5, fontWeight: 600, color: color.ink, marginBottom: 3 },
+  missedAnswer: { fontSize: 12, color: color.inkSoft, lineHeight: 1.5, marginBottom: 5 },
+  missedCount: { fontSize: 10.5, color: color.inkFaint, fontFamily: "'JetBrains Mono', monospace" },
+  missedAddBtn: { flex: "0 0 auto", padding: "8px 14px", fontSize: 12.5, whiteSpace: "nowrap" },
+
+  agentList: { display: "flex", flexDirection: "column", gap: 4, marginTop: 10 },
+  agentRow: { display: "flex", alignItems: "center", gap: 12, padding: "10px 4px", borderBottom: `1px solid ${color.borderSoft}` },
+  agentAvatar: { width: 32, height: 32, borderRadius: "50%", background: color.accentSoft, color: color.accentDeep, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 12.5, flex: "0 0 auto" },
+  agentName: { fontSize: 13, fontWeight: 600 },
+  agentSub: { fontSize: 11.5, color: color.inkSoft },
+  agentResponseTime: { fontSize: 14, fontWeight: 700, color: color.ink, textAlign: "right" },
+  agentResponseLabel: { display: "block", fontSize: 9.5, fontWeight: 500, color: color.inkFaint },
 
   leadsHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
   ghostBtn: { background: color.borderSoft, border: "none", padding: "7px 14px", borderRadius: 8, cursor: "pointer", fontSize: 12.5, fontWeight: 600, color: color.ink },

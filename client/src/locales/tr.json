@@ -1,0 +1,17 @@
+{
+  "sidebar": {
+    "setup": "Kurgu",
+    "workspace": "Çalışma alanı",
+    "liveChatInbox": "Canlı sohbet gelen kutusu",
+    "team": "Ekip",
+    "analytics": "Analitik",
+    "billing": "Faturalandırma",
+    "yourBusiness": "işletmeniz",
+    "plan": "PLAN",
+    "accountSettings": "Hesap ayarları",
+    "signOut": "Çıkış yap",
+    "openMenu": "Menüyü aç",
+    "closeMenu": "Menüyü kapat",
+    "language": "Dil"
+  }
+}

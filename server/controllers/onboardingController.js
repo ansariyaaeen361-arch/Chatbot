@@ -20,7 +20,9 @@ Based on this, respond with ONLY a JSON object (no markdown, no explanation) in 
   "services": ["service 1", "service 2", "service 3"],
   "targetCustomer": "who their ideal customer is",
   "tone": "professional" or "friendly" or "casual"
-}`;
+}
+
+Write the description like a real person describing the business, not like an AI. Plain words, short sentences. No em dashes (—), no corporate buzzwords.`;
 
     const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',

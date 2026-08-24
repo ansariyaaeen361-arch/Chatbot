@@ -1,0 +1,17 @@
+{
+  "sidebar": {
+    "setup": "Настройка",
+    "workspace": "Рабочее пространство",
+    "liveChatInbox": "Входящие в чат",
+    "team": "Коллектив",
+    "analytics": "Аналитика",
+    "billing": "Выставление счетов",
+    "yourBusiness": "Ваше предприятие",
+    "plan": "ПЛАН",
+    "accountSettings": "Настройки счетов",
+    "signOut": "Выход",
+    "openMenu": "Открыть меню",
+    "closeMenu": "Закрыть меню",
+    "language": "Язык"
+  }
+}

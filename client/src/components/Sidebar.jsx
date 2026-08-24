@@ -68,7 +68,7 @@ export default function Sidebar({ setupSections, activeSection, onSectionClick }
                   <a
                     key={id}
                     href={"#" + id}
-                    className="forge-nav"
+                    className={"forge-nav" + (isActive ? " forge-nav-active" : "")}
                     style={isActive ? { ...s.navItem, ...s.navItemActive } : s.navItem}
                     onClick={() => {
                       onSectionClick && onSectionClick(id);
@@ -91,7 +91,7 @@ export default function Sidebar({ setupSections, activeSection, onSectionClick }
               <Link
                 key={link.path}
                 to={link.path}
-                className="forge-nav"
+                className={"forge-nav" + (isActive ? " forge-nav-active" : "")}
                 style={isActive ? { ...s.navItem, ...s.navItemActive } : s.navItem}
               >
                 <NavIcon name={link.icon} />
@@ -141,6 +141,12 @@ function CloseIcon() {
 function NavIcon({ name, size = 15 }) {
   const common = { stroke: "currentColor", strokeWidth: 1.8, fill: "none", strokeLinecap: "round", strokeLinejoin: "round" };
   const icons = {
+    home: (
+      <g {...common}>
+        <path d="M3 11.5L12 4l9 7.5" />
+        <path d="M5.5 9.5V20h13V9.5" />
+      </g>
+    ),
     chat: <path {...common} d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" />,
     users: (
       <g {...common}>
@@ -181,8 +187,8 @@ const s = {
   brandPlan: { fontSize: 10, letterSpacing: "0.08em", color: color.accentLight, marginTop: 3, fontFamily: "'JetBrains Mono', monospace" },
   nav: { display: "flex", flexDirection: "column", gap: 2, flex: 1 },
   navGroupLabel: { fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: "#787C93", fontWeight: 600, margin: "14px 10px 4px", fontFamily: "'JetBrains Mono', monospace" },
-  navItem: { color: "#C6C7D6", textDecoration: "none", fontSize: 13.5, padding: "9px 10px", borderRadius: 8, display: "flex", alignItems: "center", gap: 9 },
-  navItemActive: { background: "rgba(255,255,255,.09)", color: "#fff" },
+  navItem: { color: "#C6C7D6", textDecoration: "none", fontSize: 13.5, padding: "9px 11px", borderRadius: 9, display: "flex", alignItems: "center", gap: 9 },
+  navItemActive: { background: "rgba(166,166,238,.14)", color: "#fff", fontWeight: 600 },
   navIndex: { fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, color: color.accentLight, opacity: 0.85 },
   navIndexActive: { opacity: 1 },
   navDivider: { height: 1, background: color.sidebarLine, margin: "10px 6px" },

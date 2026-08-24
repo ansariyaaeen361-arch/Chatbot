@@ -3,6 +3,7 @@ import { io } from 'socket.io-client';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import Sidebar from '../components/Sidebar';
+import BackToDashboard from '../components/BackToDashboard';
 import { color, globalStyles } from '../theme';
 
 const API_ROOT = (api.defaults.baseURL || '').replace(/\/api\/?$/, '');
@@ -178,6 +179,9 @@ export default function LiveChat() {
       <Sidebar />
 
       <div style={s.listPanel}>
+        <div style={{ padding: '12px 14px 0' }}>
+          <BackToDashboard />
+        </div>
         <div style={s.tabsWrap}>
           <div style={s.tabs}>
             <button style={{ ...s.tab, ...(tab === 'waiting' ? s.tabActive : {}) }} onClick={() => setTab('waiting')}>Waiting ({waiting.length})</button>

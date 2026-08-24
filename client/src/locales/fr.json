@@ -1,0 +1,17 @@
+{
+  "sidebar": {
+    "setup": "Réglages",
+    "workspace": "Workspace",
+    "liveChatInbox": "Boîte de réception de chat en direct",
+    "team": "L’équipe&#10;",
+    "analytics": "Analytique&#10;",
+    "billing": "Facturation",
+    "yourBusiness": "Entreprises",
+    "plan": "PLANIFIER",
+    "accountSettings": "Préférences du compte",
+    "signOut": "Se déconnecter",
+    "openMenu": "Ouvrir le menu",
+    "closeMenu": "Fermer le Menu",
+    "language": "Language"
+  }
+}

@@ -18,16 +18,28 @@ exports.getProfile = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
   try {
-    const allowedFields = ['name', 'website', 'description', 'services', 'targetCustomer', 'tone', 'brandColor', 'ctaLinks', 'welcomeMessage', 'launcherPosition', 'hideBranding'];
+    const allowedFields = ['name', 'website', 'description', 'services', 'targetCustomer', 'tone', 'brandColor', 'ctaLinks', 'welcomeMessage', 'launcherPosition', 'hideBranding', 'crmWebhookUrl', 'businessHours', 'awayMessage', 'autoAssignChats'];
     const updates = {};
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) updates[field] = req.body[field];
     });
 
-    if (updates.hideBranding === true) {
+    if (updates.hideBranding === true || updates.crmWebhookUrl) {
       const currentBusiness = await Business.findById(req.user.businessId).select('plan');
-      if (!hasFeature(currentBusiness, 'removeBranding')) {
+      if (updates.hideBranding === true && !hasFeature(currentBusiness, 'removeBranding')) {
         return res.status(403).json({ error: 'Removing the "Powered by" badge is available on Growth and Pro plans. Please upgrade.' });
+      }
+      if (updates.crmWebhookUrl && !hasFeature(currentBusiness, 'crmIntegration')) {
+        return res.status(403).json({ error: 'CRM integration is available on Growth and Pro plans. Please upgrade.' });
+      }
+    }
+
+    if (updates.crmWebhookUrl) {
+      try {
+        const parsed = new URL(updates.crmWebhookUrl);
+        if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('bad protocol');
+      } catch {
+        return res.status(400).json({ error: 'CRM webhook URL must be a valid http(s) URL.' });
       }
     }
 
@@ -36,6 +48,45 @@ exports.updateProfile = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Something went wrong. Please try again.' });
+  }
+};
+
+exports.testCrmWebhook = async (req, res) => {
+  try {
+    const business = await Business.findById(req.user.businessId).select('name plan crmWebhookUrl');
+    if (!hasFeature(business, 'crmIntegration')) {
+      return res.status(403).json({ error: 'CRM integration is available on Growth and Pro plans. Please upgrade.' });
+    }
+    if (!business.crmWebhookUrl) {
+      return res.status(400).json({ error: 'Save a CRM webhook URL first.' });
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    try {
+      const result = await fetch(business.crmWebhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source: 'mentalforge_chatbot',
+          businessName: business.name,
+          name: 'Test Lead',
+          email: 'test@example.com',
+          phone: '',
+          createdAt: new Date().toISOString(),
+          test: true,
+        }),
+        signal: controller.signal,
+      });
+      if (!result.ok) {
+        return res.status(502).json({ error: `Webhook responded with status ${result.status}` });
+      }
+      res.json({ success: true });
+    } finally {
+      clearTimeout(timeout);
+    }
+  } catch (err) {
+    res.status(502).json({ error: err.name === 'AbortError' ? 'Webhook timed out' : 'Could not reach that URL' });
   }
 };
 
@@ -55,6 +106,20 @@ exports.uploadLogo = async (req, res) => {
   }
 };
 
+exports.removeLogo = async (req, res) => {
+  try {
+    const business = await Business.findByIdAndUpdate(
+      req.user.businessId,
+      { logoUrl: '' },
+      { new: true }
+    );
+    res.json({ logoUrl: business.logoUrl });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
+  }
+};
+
 exports.updateFaqs = async (req, res) => {
   try {
     const { faqs } = req.body;
@@ -62,6 +127,24 @@ exports.updateFaqs = async (req, res) => {
     const business = await Business.findByIdAndUpdate(
       req.user.businessId,
       { faqs },
+      { new: true }
+    );
+    res.json({ faqs: business.faqs });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
+  }
+};
+
+// Promotes a "missed FAQ" analytics suggestion straight into the FAQ list, without
+// requiring the caller to already have the full faqs array loaded (unlike updateFaqs).
+exports.addFaqFromSuggestion = async (req, res) => {
+  try {
+    const { question, answer } = req.body;
+    if (!question || !answer) return res.status(400).json({ error: 'question and answer are required' });
+    const business = await Business.findByIdAndUpdate(
+      req.user.businessId,
+      { $push: { faqs: { question, answer } } },
       { new: true }
     );
     res.json({ faqs: business.faqs });
@@ -203,6 +286,74 @@ exports.removeKnowledgeEntry = async (req, res) => {
     res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 };
+// Uses AI to draft candidate FAQ pairs from one knowledge base entry (usually a
+// scraped page). Returned as suggestions only — nothing is saved until the owner
+// picks "Add as FAQ" on the ones they actually want (reuses addFaqFromSuggestion).
+exports.suggestFaqsFromKnowledge = async (req, res) => {
+  try {
+    const { entryId } = req.params;
+    const business = await Business.findById(req.user.businessId).select('knowledgeBase monthlySpendUsed monthlySpendCap');
+    if (!business) return res.status(404).json({ error: 'Business not found' });
+
+    const entry = business.knowledgeBase.id(entryId);
+    if (!entry) return res.status(404).json({ error: 'Knowledge entry not found' });
+
+    if (business.monthlySpendUsed >= business.monthlySpendCap) {
+      return res.status(403).json({ error: 'This month’s AI budget has been used up. Try again next month or upgrade your plan.' });
+    }
+
+    const prompt = `Here is a piece of content from a business's knowledge base, titled "${entry.title}":
+
+${entry.content.slice(0, 4000)}
+
+Based on this, suggest 2 to 5 frequently-asked-question pairs a customer might ask that this content directly answers. Respond with ONLY a JSON array (no markdown, no explanation) in this exact shape:
+[{"question": "...", "answer": "..."}]
+
+Write plainly, like a real person, not like an AI. No em dashes (—). Keep each answer to 1-2 sentences, using only facts actually present in the content above.`;
+
+    const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 600,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!aiRes.ok) {
+      const detail = await aiRes.text();
+      console.log('Anthropic error:', detail);
+      return res.status(502).json({ error: 'AI suggestion failed' });
+    }
+
+    const data = await aiRes.json();
+    const rawText = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+
+    const usage = data.usage || {};
+    const cost = ((usage.input_tokens || 0) / 1e6) * 1 + ((usage.output_tokens || 0) / 1e6) * 5;
+    await Business.updateOne({ _id: req.user.businessId }, { $inc: { monthlySpendUsed: cost } });
+
+    let suggestions;
+    try {
+      const cleaned = rawText.replace(/```json|```/g, '').trim();
+      suggestions = JSON.parse(cleaned);
+    } catch (e) {
+      return res.status(502).json({ error: 'Could not parse AI response' });
+    }
+
+    if (!Array.isArray(suggestions)) suggestions = [];
+    res.json({ suggestions: suggestions.slice(0, 5).filter(s => s && s.question && s.answer) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
+  }
+};
+
 exports.uploadLauncherMedia = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });

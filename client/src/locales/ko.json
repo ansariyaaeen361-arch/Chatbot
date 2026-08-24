@@ -1,0 +1,17 @@
+{
+  "sidebar": {
+    "setup": "셋업",
+    "workspace": "워크스페이스",
+    "liveChatInbox": "실시간 채팅 메시지함",
+    "team": "팀",
+    "analytics": "분석",
+    "billing": "청구",
+    "yourBusiness": "편집권을 요청하세요",
+    "plan": "계획",
+    "accountSettings": "계정 설정",
+    "signOut": "로그아웃",
+    "openMenu": "메뉴 열기",
+    "closeMenu": "메뉴 닫기",
+    "language": "언어"
+  }
+}

@@ -11,9 +11,10 @@ async function resetIfNewMonth(business) {
     business.monthlySpendUsed = 0;
     business.monthlyConversationsUsed = 0;
     business.spendResetAt = now;
+    business.spendWarningSent = false;
     await Business.updateOne(
       { _id: business._id },
-      { monthlySpendUsed: 0, monthlyConversationsUsed: 0, spendResetAt: now }
+      { monthlySpendUsed: 0, monthlyConversationsUsed: 0, spendResetAt: now, spendWarningSent: false }
     );
   }
 }

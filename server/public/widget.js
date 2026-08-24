@@ -35,6 +35,9 @@
   var MENU_ICON_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>';
   var DOWNLOAD_ICON_SVG = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
   var LEAVE_ICON_SVG = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>';
+  var THUMB_UP_SVG = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>';
+  var MAIL_ICON_SVG = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><polyline points="22 6 12 13 2 6"/></svg>';
+  var THUMB_DOWN_SVG = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3H10z"/><path d="M17 2h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"/></svg>';
 
   function genSessionId() {
     return 's_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
@@ -79,12 +82,15 @@
     var FONT = 'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;';
     var css =
       '.mf2-launch{position:fixed;' + side + ':22px;bottom:22px;z-index:2147483000;width:68px;height:68px;border:none;border-radius:50%;' +
-      'background:' + brand + ';color:#fff;cursor:pointer;box-shadow:0 14px 34px -6px ' + brand + '77,0 6px 16px -4px rgba(0,0,0,.25);display:grid;place-items:center;' +
-      'overflow:hidden;padding:0;transition:transform .2s cubic-bezier(.34,1.56,.64,1), box-shadow .2s ease;' + FONT +
+      'background:transparent;color:#fff;cursor:pointer;box-shadow:0 14px 34px -6px ' + brand + '77,0 6px 16px -4px rgba(0,0,0,.25);' +
+      'padding:0;transition:transform .2s cubic-bezier(.34,1.56,.64,1), box-shadow .2s ease;' + FONT +
       'animation:mf2PopIn .35s cubic-bezier(.34,1.56,.64,1);}' +
       '.mf2-launch:hover{transform:translateY(-4px) scale(1.06);box-shadow:0 18px 40px -6px ' + brand + '90,0 8px 20px -4px rgba(0,0,0,.3);}' +
       '.mf2-launch:active{transform:translateY(-1px) scale(.97);}' +
+      '.mf2-launch-inner{position:relative;z-index:1;width:100%;height:100%;border-radius:50%;overflow:hidden;background:' + brand + ';display:grid;place-items:center;}' +
       '.mf2-launch-media{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;}' +
+      '.mf2-launch-ring{position:absolute;inset:0;border-radius:50%;background:' + brand + ';animation:mf2RingPulse 2.6s cubic-bezier(0,0,.2,1) infinite;pointer-events:none;}' +
+      '@keyframes mf2RingPulse{0%{transform:scale(.9);opacity:.4;}80%,100%{transform:scale(1.7);opacity:0;}}' +
       '@keyframes mf2PopIn{0%{transform:scale(0);opacity:0;}100%{transform:scale(1);opacity:1;}}' +
       '.mf2-dot{position:absolute;top:4px;right:4px;width:15px;height:15px;border-radius:50%;background:#EF4444;border:2.5px solid #fff;display:none;box-shadow:0 2px 6px rgba(0,0,0,.25);}' +
       '.mf2-dot.show{display:block;animation:mf2Pulse 1.8s ease-in-out infinite;}' +
@@ -133,6 +139,8 @@
       '.mf2-status{font-size:11.5px;opacity:.9;display:flex;align-items:center;gap:6px;margin-top:2px;}' +
       '.mf2-status-dot{width:7.5px;height:7.5px;border-radius:50%;background:#4ADE80;box-shadow:0 0 0 2px rgba(255,255,255,.35);flex:0 0 auto;position:relative;}' +
       '.mf2-status-dot:after{content:"";position:absolute;inset:-3px;border-radius:50%;background:#4ADE80;opacity:.65;animation:mf2Glow 1.8s ease-out infinite;}' +
+      '.mf2-status-dot.away{background:#9CA0AE;}' +
+      '.mf2-status-dot.away:after{display:none;}' +
       '@keyframes mf2Glow{0%{transform:scale(1);opacity:.65;}100%{transform:scale(2.6);opacity:0;}}' +
       '.mf2-x{background:none;border:none;color:#fff;cursor:pointer;opacity:.85;display:flex;align-items:center;justify-content:center;padding:6px;border-radius:8px;transition:background .12s ease,opacity .12s ease;flex:0 0 auto;}' +
       '.mf2-x:hover{opacity:1;background:rgba(255,255,255,.18);}' +
@@ -161,6 +169,14 @@
       '.mf2-cta{margin-top:8px;display:inline-block;text-decoration:none;background:' + brand + ';color:#fff;' +
       'font-size:13px;font-weight:600;padding:8px 14px;border-radius:10px;transition:opacity .12s ease;}' +
       '.mf2-cta:hover{opacity:.9;}' +
+      '.mf2-feedback{display:flex;gap:4px;margin-top:4px;}' +
+      '.mf2-fb-btn{width:24px;height:24px;border:none;background:none;border-radius:7px;cursor:pointer;display:flex;' +
+      'align-items:center;justify-content:center;color:#ADAEBE;transition:background .12s ease,color .12s ease;padding:0;}' +
+      '.mf2-fb-btn:hover{background:#EFEFF4;color:#6B6C7E;}' +
+      '.mf2-fb-btn.active.up{color:#0E9F6E;background:#E7F4EC;}' +
+      '.mf2-fb-btn.active.down{color:#DC5B54;background:#FAE7E6;}' +
+      '.mf2-fb-btn[disabled]{cursor:default;}' +
+      '.mf2-fb-btn[disabled]:not(.active):hover{background:none;color:#ADAEBE;}' +
       '.mf2-foot{border-top:1px solid #EDEDF2;padding:12px 14px;background:#fff;flex:0 0 auto;}' +
       '.mf2-inrow{display:flex;gap:8px;align-items:center;}' +
       '.mf2-input{flex:1;resize:none;border:1px solid #E5E5EC;border-radius:12px;padding:11px 14px;font-size:14px;font-family:inherit;outline:none;max-height:100px;background:#FAFAFC;transition:border-color .15s ease, box-shadow .15s ease, background .15s ease;}' +
@@ -211,7 +227,7 @@
     shadowRoot.appendChild(style);
   }
 
-  var body, input, sendBtn, panel, dot, humanBtn, menuBtn, menuPanel, menuBack, downloadBtn, leaveBtn, teaser, teaserTimer, gate, foot;
+  var body, input, sendBtn, panel, dot, humanBtn, menuBtn, menuPanel, menuBack, downloadBtn, emailBtn, leaveBtn, teaser, teaserTimer, gate, foot;
   var TEASER_DISMISS_KEY = "mf_teaser_dismissed_" + businessId;
   var pendingQuickReply = null;
   var typingRow = null;
@@ -261,7 +277,11 @@
     var launch = document.createElement('button');
     launch.className = 'mf2-launch';
     launch.setAttribute('aria-label', 'Open chat');
-    launch.innerHTML = buildLauncherInner() + '<span class="mf2-dot" id="mf2Dot"></span>';
+    launch.innerHTML =
+      '<span class="mf2-launch-ring"></span>' +
+      '<span class="mf2-launch-ring" style="animation-delay:1.3s"></span>' +
+      '<span class="mf2-launch-inner">' + buildLauncherInner() + '</span>' +
+      '<span class="mf2-dot" id="mf2Dot"></span>';
 
     panel = document.createElement('div');
     panel.className = 'mf2-panel';
@@ -270,7 +290,11 @@
         (config.logoUrl ? '<img src="' + API_ROOT + config.logoUrl + '">' : '') +
         '<div class="mf2-head-text">' +
           '<div class="mf2-title">' + escapeHtml(config.name) + '</div>' +
-          '<div class="mf2-status"><span class="mf2-status-dot"></span>Online now</div>' +
+          '<div class="mf2-status">' +
+            (config.isOpen === false
+              ? '<span class="mf2-status-dot away"></span>Currently away'
+              : '<span class="mf2-status-dot"></span>Online now') +
+          '</div>' +
         '</div>' +
         '<button class="mf2-menu-btn" id="mf2MenuBtn" aria-label="More options">' + MENU_ICON_SVG + '</button>' +
         '<button class="mf2-x" aria-label="Close">' + CLOSE_ICON_SVG + '</button>' +
@@ -281,6 +305,7 @@
         '<div class="mf2-menu-head"><button class="mf2-menu-back" id="mf2MenuBack" aria-label="Back">&larr;</button><div class="mf2-menu-title">Options</div></div>' +
         '<div class="mf2-menu-body">' +
           '<button class="mf2-menu-item" id="mf2DownloadBtn">' + DOWNLOAD_ICON_SVG + 'Download conversation</button>' +
+          '<button class="mf2-menu-item" id="mf2EmailBtn">' + MAIL_ICON_SVG + 'Email me this conversation</button>' +
           '<button class="mf2-menu-item danger" id="mf2LeaveBtn">' + LEAVE_ICON_SVG + 'Leave this chat</button>' +
         '</div>' +
       '</div>' +
@@ -311,7 +336,7 @@
         '<div class="mf2-teaser-avatar">' + teaserAvatar + '</div>' +
         '<div>' +
           '<div class="mf2-teaser-name">' + escapeHtml(config.name) + '</div>' +
-          '<div class="mf2-teaser-text">' + escapeHtml(config.welcomeMessage || "Hi! How can I help you today?") + '</div>' +
+          '<div class="mf2-teaser-text">' + escapeHtml(greetingText()) + '</div>' +
         '</div>' +
       '</div>' +
       (quickReplies.length
@@ -337,6 +362,7 @@
     menuPanel = panel.querySelector('#mf2MenuPanel');
     menuBack = panel.querySelector('#mf2MenuBack');
     downloadBtn = panel.querySelector('#mf2DownloadBtn');
+    emailBtn = panel.querySelector('#mf2EmailBtn');
     leaveBtn = panel.querySelector('#mf2LeaveBtn');
 
     var opened = false;
@@ -371,6 +397,7 @@
     menuBtn.addEventListener('click', function () { menuPanel.classList.add('open'); });
     menuBack.addEventListener('click', function () { menuPanel.classList.remove('open'); });
     downloadBtn.addEventListener('click', downloadConversation);
+    emailBtn.addEventListener('click', emailTranscript);
     leaveBtn.addEventListener('click', leaveChat);
 
     maybeShowTeaser();
@@ -381,10 +408,22 @@
     var dismissed = false;
     try { dismissed = localStorage.getItem(TEASER_DISMISS_KEY) === '1'; } catch (e) {}
     if (dismissed) return;
-    teaserTimer = setTimeout(function () {
-      if (panel.classList.contains('open')) return;
+
+    function reveal() {
+      if (panel.classList.contains('open') || teaser.classList.contains('show')) return;
       teaser.classList.add('show');
-    }, 2500);
+    }
+
+    teaserTimer = setTimeout(reveal, 2500);
+
+    // Exit intent — mouse moving up toward the browser chrome (tab bar / back button)
+    // usually means the visitor is about to leave the page.
+    function onMouseLeave(e) {
+      if (e.clientY > 0) return;
+      reveal();
+      document.removeEventListener('mouseleave', onMouseLeave);
+    }
+    document.addEventListener('mouseleave', onMouseLeave);
   }
 
   function dismissTeaser(permanent) {
@@ -423,7 +462,7 @@
     }
   }
 
-  function addBubble(role, text, ctaUrl, ctaLabel, silent, ts) {
+  function addBubble(role, text, ctaUrl, ctaLabel, silent, ts, chatLogId) {
     var cls = role === 'user' ? 'user' : (role === 'rep' ? 'rep' : (role === 'system' ? 'system' : 'bot'));
     var row = document.createElement('div');
     row.className = 'mf2-row' + (role === 'user' ? ' user' : '');
@@ -471,6 +510,11 @@
       col.appendChild(document.createElement('br'));
       col.appendChild(a);
     }
+
+    if (role === 'assistant' && chatLogId) {
+      col.appendChild(buildFeedbackRow(chatLogId));
+    }
+
     row.appendChild(col);
     body.appendChild(row);
     if (typingRow) body.appendChild(typingRow);
@@ -478,6 +522,32 @@
     if (!silent && (role === 'assistant' || role === 'rep')) showDot();
   }
   function addSystem(text, ts) { addBubble('system', text, null, null, true, ts); }
+
+  function buildFeedbackRow(chatLogId) {
+    var wrap = document.createElement('div');
+    wrap.className = 'mf2-feedback';
+
+    var up = document.createElement('button');
+    up.className = 'mf2-fb-btn'; up.innerHTML = THUMB_UP_SVG; up.setAttribute('aria-label', 'Good reply'); up.type = 'button';
+    var down = document.createElement('button');
+    down.className = 'mf2-fb-btn'; down.innerHTML = THUMB_DOWN_SVG; down.setAttribute('aria-label', 'Bad reply'); down.type = 'button';
+
+    function rate(rating, btn, otherBtn) {
+      if (up.disabled) return;
+      up.disabled = true; down.disabled = true;
+      btn.classList.add('active', rating);
+      fetch(API_BASE + "/public/feedback/" + chatLogId, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating: rating })
+      }).catch(function () {});
+    }
+    up.addEventListener('click', function () { rate('up', up, down); });
+    down.addEventListener('click', function () { rate('down', down, up); });
+
+    wrap.appendChild(up);
+    wrap.appendChild(down);
+    return wrap;
+  }
 
   function showTyping(isLive) {
     hideTyping();
@@ -587,8 +657,13 @@
     startChat();
   }
 
+  function greetingText() {
+    if (config.isOpen === false && config.awayMessage) return config.awayMessage;
+    return config.welcomeMessage || "Hi! How can I help you today?";
+  }
+
   function startChat() {
-    var greeting = config.welcomeMessage || "Hi! How can I help you today?";
+    var greeting = greetingText();
     addBubble('assistant', greeting, null, null, true);
     state.messages.push({ role: 'assistant', content: greeting });
     saveState();
@@ -635,7 +710,7 @@
       var reply = data.reply || "Sorry, something went wrong. Please try again.";
       var replyTime = new Date();
       var cta = (config.ctaLinks && config.ctaLinks[0]) ? config.ctaLinks[0] : null;
-      addBubble('assistant', reply, cta ? cta.url : null, cta ? cta.label : null, false, replyTime);
+      addBubble('assistant', reply, cta ? cta.url : null, cta ? cta.label : null, false, replyTime, data.chatLogId);
       state.messages.push({ role: 'assistant', content: reply, ts: replyTime });
       saveState();
     } catch (e) {
@@ -647,12 +722,16 @@
   }
 
   // ---------- hamburger menu actions ----------
-  function downloadConversation() {
+  function buildTranscriptText() {
     var lines = state.messages.map(function (m) {
       var who = m.role === 'user' ? 'You' : (m.role === 'rep' ? 'Team member' : (m.role === 'system' ? 'System' : (config.name || 'Assistant')));
       return who + ': ' + m.content;
     });
-    var text = lines.length ? lines.join('\n\n') : 'No conversation yet.';
+    return lines.length ? lines.join('\n\n') : 'No conversation yet.';
+  }
+
+  function downloadConversation() {
+    var text = buildTranscriptText();
     var blob = new Blob([text], { type: 'text/plain' });
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
@@ -663,6 +742,25 @@
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     menuPanel.classList.remove('open');
+  }
+
+  function emailTranscript() {
+    menuPanel.classList.remove('open');
+    var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    var email = (state.visitor && state.visitor.email && EMAIL_RE.test(state.visitor.email)) ? state.visitor.email : null;
+    if (!email) {
+      email = window.prompt('Enter your email to receive this conversation:');
+      if (!email || !EMAIL_RE.test(email)) return;
+    }
+    addSystem('Sending the conversation to ' + email + '…');
+    fetch(API_BASE + "/public/transcript/" + businessId, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, transcript: buildTranscriptText() })
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      addSystem(data.success ? 'Sent! Check your inbox.' : 'Could not send that right now. Please try again.');
+    }).catch(function () {
+      addSystem('Could not send that right now. Please try again.');
+    });
   }
 
   function leaveChat() {
@@ -697,7 +795,7 @@
   }
 
   function startLiveChat() {
-    if (state.liveMode) { addSystem("You're already connected — send your message below."); return; }
+    if (state.liveMode) { addSystem("You're already connected. Send your message below."); return; }
     if (!state.leadCaptured) { showLeadForm('live'); return; }
     actuallyStartLiveChat();
   }
@@ -720,7 +818,7 @@
         state.liveMode = true;
         state.chatId = data.chatId;
         saveState();
-        var msg = "Connecting you to a team member — hang tight, someone will join shortly.";
+        var msg = "Connecting you to a team member. Hang tight, someone will join shortly.";
         addSystem(msg);
         state.messages.push({ role: 'system', content: msg });
         saveState();
