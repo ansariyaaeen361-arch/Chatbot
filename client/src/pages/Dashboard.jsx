@@ -382,7 +382,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div style={s.pageBody}>
+        <div style={s.pageBody} className="forge-page-body">
         <main style={s.mainCol} className="forge-main forge-main-col">
         <p style={s.pageSubtitle}>Everything your chatbot knows and shows, in one place.</p>
 
@@ -455,7 +455,7 @@ export default function Dashboard() {
               <textarea className="forge-input" style={{ ...s.input, height: 84, resize: "vertical" }} value={business.description} onChange={(e) => updateField("description", e.target.value)} />
             </Field>
 
-            <div style={s.twoCol}>
+            <div className="forge-two-col">
               <Field label="Target customer">
                 <input className="forge-input" style={s.input} value={business.targetCustomer} onChange={(e) => updateField("targetCustomer", e.target.value)} />
               </Field>
@@ -490,7 +490,7 @@ export default function Dashboard() {
             desc="Make the widget look like it belongs on your site."
             info="This controls how the chat widget looks to your visitors: your logo, colors, the first message it shows, and which corner of the screen it sits in."
           >
-            <div style={s.twoCol}>
+            <div className="forge-two-col">
               <Field label="Logo">
                 <div style={s.logoUploadRow}>
                   <div className="forge-logo-box" style={s.logoPreviewBox}>
@@ -563,7 +563,7 @@ export default function Dashboard() {
               />
             </Field>
 
-            <div style={s.twoCol}>
+            <div className="forge-two-col">
               <Field label="Launcher position">
                 <select
                   className="forge-input"
@@ -796,7 +796,7 @@ export default function Dashboard() {
                             </div>
                             <button
                               className="forge-btn-primary"
-                              style={s.suggestionAddBtn}
+                              style={{ ...s.primaryBtn, ...s.suggestionAddBtn }}
                               onClick={() => addSuggestedFaq(entry._id, i, item)}
                             >
                               + Add
@@ -810,7 +810,7 @@ export default function Dashboard() {
               </div>
             )}
 
-            <div style={s.knowledgeAddGrid}>
+            <div style={s.knowledgeAddGrid} className="forge-two-col">
               <div style={s.knowledgeAddCol}>
                 <div style={s.knowledgeAddLabel}>Scan a page</div>
                 <div style={s.inlineRow}>
@@ -1100,7 +1100,7 @@ const s = {
   pageSubtitle: { fontSize: 13, color: color.inkSoft, margin: "0 0 20px" },
   toast: { background: color.successSoft, color: color.successText, padding: "8px 14px", borderRadius: radius.sm, fontSize: 12.5, fontWeight: 600, alignSelf: "center" },
 
-  pageBody: { display: "flex", gap: 32, alignItems: "stretch", maxWidth: 1200, margin: "0 auto", padding: "28px 40px 100px", boxSizing: "border-box" },
+  pageBody: { display: "flex", gap: 32, alignItems: "stretch", width: "100%", maxWidth: 1200, margin: "0 auto", padding: "28px 40px 100px", boxSizing: "border-box" },
   mainCol: { flex: 1, minWidth: 0 },
   previewCol: { width: 300, flex: "0 0 300px" },
 
@@ -1134,19 +1134,18 @@ const s = {
   field: { marginBottom: 16 },
   label: { display: "block", fontSize: 12, color: color.inkSoft, fontWeight: 600, marginBottom: 6 },
   input: { width: "100%", boxSizing: "border-box", padding: "10px 12px", border: `1px solid ${color.border}`, borderRadius: 9, fontSize: 13.5, fontFamily: "inherit", background: "#FBFBFD", color: color.ink },
-  twoCol: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 },
-  inlineRow: { display: "flex", gap: 10 },
+  inlineRow: { display: "flex", flexWrap: "wrap", gap: 10 },
 
   chipList: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 8 },
   chipRow: { display: "flex", gap: 8 },
   chipInput: { flex: 1, padding: "9px 11px", border: `1px solid ${color.border}`, borderRadius: 8, fontSize: 13.5, fontFamily: "inherit", background: "#FBFBFD" },
-  chipRemove: { background: color.borderSoft, border: "none", borderRadius: 8, cursor: "pointer", padding: "0 12px", color: color.danger, fontSize: 13 },
+  chipRemove: { background: color.borderSoft, border: "none", borderRadius: 100, cursor: "pointer", padding: "0 12px", color: color.danger, fontSize: 13 },
 
   logoUploadRow: { display: "flex", alignItems: "center", gap: 14 },
   logoPreviewBox: { width: 56, height: 56, borderRadius: 10, border: `1px solid ${color.border}`, background: "#FBFBFD", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flex: "0 0 auto" },
   logoPreviewImg: { width: "100%", height: "100%", objectFit: "cover" },
   logoPlaceholder: { fontSize: 20, fontWeight: 700, color: color.inkFaint, fontFamily: "'Space Grotesk', sans-serif" },
-  uploadBtn: { background: color.borderSoft, padding: "9px 14px", borderRadius: 8, fontSize: 12.5, cursor: "pointer", fontWeight: 600 },
+  uploadBtn: { background: color.borderSoft, padding: "9px 14px", borderRadius: 100, fontSize: 12.5, cursor: "pointer", fontWeight: 600 },
 
   colorRow: { display: "flex", alignItems: "center", gap: 10 },
   colorSwatch: { width: 44, height: 40, border: `1px solid ${color.border}`, borderRadius: 8, cursor: "pointer", padding: 2, background: "#fff" },
@@ -1155,10 +1154,10 @@ const s = {
   toggleLabel: { fontSize: 13, color: color.inkSoft },
 
   hoursGrid: { display: "flex", flexDirection: "column", gap: 6 },
-  hoursRow: { display: "flex", alignItems: "center", gap: 12, padding: "8px 10px", background: "#FBFBFD", border: `1px solid ${color.borderSoft}`, borderRadius: 8 },
+  hoursRow: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, padding: "8px 10px", background: "#FBFBFD", border: `1px solid ${color.borderSoft}`, borderRadius: 8 },
   hoursDayLabel: { fontSize: 12.5, fontWeight: 600, color: color.ink, width: 84, flex: "0 0 auto" },
   hoursClosedToggle: { display: "flex", alignItems: "center", gap: 5, fontSize: 11.5, color: color.inkSoft, flex: "0 0 auto" },
-  hoursTimeInput: { width: 110, padding: "6px 8px", fontSize: 12.5 },
+  hoursTimeInput: { width: 100, minWidth: 90, flex: "1 1 90px", padding: "6px 8px", fontSize: 12.5 },
   hoursDash: { color: color.inkFaint, fontSize: 12 },
   hoursClosedLabel: { fontSize: 11.5, color: color.inkFaint, fontStyle: "italic" },
   upgradeLink: { fontSize: 12.5, color: color.accent, fontWeight: 600, textDecoration: "none" },
@@ -1189,13 +1188,13 @@ const s = {
   sourceBadgeManual: { fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: color.borderSoft, color: color.inkSoft, textTransform: "uppercase", letterSpacing: "0.03em" },
   sourceBadgeScraped: { fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: color.accentSoft, color: color.accentDeep, textTransform: "uppercase", letterSpacing: "0.03em" },
 
-  knowledgeAddGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, paddingTop: 12, borderTop: `1px solid ${color.borderSoft}` },
+  knowledgeAddGrid: { paddingTop: 12, borderTop: `1px solid ${color.borderSoft}` },
   knowledgeAddCol: {},
   knowledgeAddLabel: { fontSize: 12, color: color.inkSoft, fontWeight: 600, marginBottom: 8 },
   knowledgeHint: { fontSize: 11, color: color.inkFaint, margin: "8px 0 0", lineHeight: 1.5 },
 
-  primaryBtn: { background: color.accent, color: "#fff", border: "none", padding: "10px 18px", borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" },
-  ghostBtn: { background: color.borderSoft, border: "none", padding: "8px 16px", borderRadius: 8, cursor: "pointer", fontSize: 12.5, fontWeight: 600, color: color.ink },
+  primaryBtn: { background: color.accent, color: "#fff", border: "none", padding: "10px 18px", borderRadius: 100, fontWeight: 600, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" },
+  ghostBtn: { background: color.borderSoft, border: "none", padding: "8px 16px", borderRadius: 100, cursor: "pointer", fontSize: 12.5, fontWeight: 600, color: color.ink },
   stickyBar: { display: "flex", justifyContent: "flex-end", marginBottom: 30 },
   cardFooterRow: { display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16, paddingTop: 16, borderTop: `1px solid ${color.borderSoft}` },
   cardFooterEnd: { display: "flex", justifyContent: "flex-end", marginTop: 16, paddingTop: 16, borderTop: `1px solid ${color.borderSoft}` },

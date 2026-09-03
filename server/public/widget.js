@@ -577,7 +577,7 @@
     var phone = contact.indexOf('@') === -1 ? contact : '';
     fetch(API_BASE + "/public/lead/" + businessId, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name, email: email, phone: phone })
+      body: JSON.stringify({ name: name, email: email, phone: phone, sessionId: state.sessionId })
     }).catch(function () {}).finally(function () {
       state.leadCaptured = true;
       state.visitor = { name: name, email: email, phone: phone };

@@ -14,6 +14,9 @@ export default function Analytics() {
   const [promotingIndex, setPromotingIndex] = useState(null);
   const [exporting, setExporting] = useState(false);
   const [blocked, setBlocked] = useState(false);
+  const [expandedLeadId, setExpandedLeadId] = useState(null);
+  const [leadConversations, setLeadConversations] = useState({});
+  const [loadingConversation, setLoadingConversation] = useState(null);
 
   useEffect(() => {
     api.get("/analytics/overview").then((res) => setOverview(res.data)).catch((err) => {
@@ -24,6 +27,24 @@ export default function Analytics() {
     api.get("/analytics/missed-faqs").then((res) => setMissedFaqs(res.data)).catch(() => {});
     api.get("/analytics/agent-stats").then((res) => setAgentStats(res.data)).catch(() => {});
   }, []);
+
+  const toggleLeadConversation = async (leadId) => {
+    if (expandedLeadId === leadId) {
+      setExpandedLeadId(null);
+      return;
+    }
+    setExpandedLeadId(leadId);
+    if (leadConversations[leadId]) return;
+    setLoadingConversation(leadId);
+    try {
+      const res = await api.get(`/analytics/leads/${leadId}/conversation`);
+      setLeadConversations((prev) => ({ ...prev, [leadId]: res.data }));
+    } catch {
+      setLeadConversations((prev) => ({ ...prev, [leadId]: { messages: [], note: "Could not load this conversation." } }));
+    } finally {
+      setLoadingConversation(null);
+    }
+  };
 
   const promoteToFaq = async (item, index) => {
     setPromotingIndex(index);
@@ -140,7 +161,7 @@ export default function Analytics() {
                   </div>
                   <button
                     className="forge-btn-primary"
-                    style={s.missedAddBtn}
+                    style={{ ...s.primaryBtn, ...s.missedAddBtn }}
                     onClick={() => promoteToFaq(item, i)}
                     disabled={promotingIndex === i}
                   >
@@ -181,16 +202,38 @@ export default function Analytics() {
             </button>
           </div>
           <div style={s.leadsList}>
-            {leads.map((l) => (
-              <div key={l._id} style={s.leadRow}>
-                <div style={s.leadAvatar}>{l.name.charAt(0).toUpperCase()}</div>
-                <div style={{ flex: 1 }}>
-                  <div style={s.leadName}>{l.name}</div>
-                  <div style={s.leadContact}>{l.email || l.phone || "—"}</div>
+            {leads.map((l) => {
+              const isOpen = expandedLeadId === l._id;
+              const convo = leadConversations[l._id];
+              return (
+                <div key={l._id}>
+                  <button className="forge-ghost" style={s.leadRow} onClick={() => toggleLeadConversation(l._id)}>
+                    <div style={s.leadAvatar}>{l.name.charAt(0).toUpperCase()}</div>
+                    <div style={{ flex: 1, textAlign: "left" }}>
+                      <div style={s.leadName}>{l.name}</div>
+                      <div style={s.leadContact}>{l.email || l.phone || "—"}</div>
+                    </div>
+                    <div style={s.leadDate}>{new Date(l.createdAt).toLocaleDateString()}</div>
+                    <span style={{ ...s.leadChevron, transform: isOpen ? "rotate(180deg)" : "none" }}>⌄</span>
+                  </button>
+
+                  {isOpen && (
+                    <div style={s.leadConvoBox}>
+                      {loadingConversation === l._id && <div style={s.leadConvoNote}>Loading…</div>}
+                      {convo && convo.messages.length === 0 && (
+                        <div style={s.leadConvoNote}>{convo.note || "No conversation linked to this lead yet."}</div>
+                      )}
+                      {convo && convo.messages.map((m, i) => (
+                        <div key={i} style={m.role === "visitor" ? s.leadMsgVisitor : s.leadMsgBot}>
+                          <span style={s.leadMsgRole}>{m.role === "visitor" ? l.name : "Bot"}</span>
+                          {m.text}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div style={s.leadDate}>{new Date(l.createdAt).toLocaleDateString()}</div>
-              </div>
-            ))}
+              );
+            })}
             {leads.length === 0 && <p style={s.cardDesc}>No leads captured yet.</p>}
           </div>
         </div>
@@ -236,7 +279,7 @@ const s = {
   card: { background: color.surface, border: `1px solid ${color.border}`, borderRadius: 14, padding: 22, marginBottom: 18 },
   cardTitle: { fontSize: 15.5, fontWeight: 700, margin: "0 0 4px", fontFamily: "'Space Grotesk', sans-serif" },
   cardDesc: { fontSize: 12.5, color: color.inkSoft, margin: "0 0 14px" },
-  primaryBtn: { background: color.accent, color: "#fff", border: "none", padding: "11px 22px", borderRadius: 9, fontWeight: 600, fontSize: 13.5, cursor: "pointer", display: "inline-block", textDecoration: "none" },
+  primaryBtn: { background: color.accent, color: "#fff", border: "none", padding: "11px 22px", borderRadius: 100, fontWeight: 600, fontSize: 13.5, cursor: "pointer", display: "inline-block", textDecoration: "none" },
 
   questionList: { display: "flex", flexDirection: "column", gap: 8 },
   questionRow: { display: "flex", justifyContent: "space-between", padding: "8px 10px", background: "#FBFBFD", borderRadius: 8, fontSize: 13 },
@@ -259,13 +302,20 @@ const s = {
   agentResponseLabel: { display: "block", fontSize: 9.5, fontWeight: 500, color: color.inkFaint },
 
   leadsHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
-  ghostBtn: { background: color.borderSoft, border: "none", padding: "7px 14px", borderRadius: 8, cursor: "pointer", fontSize: 12.5, fontWeight: 600, color: color.ink },
+  ghostBtn: { background: color.borderSoft, border: "none", padding: "7px 14px", borderRadius: 100, cursor: "pointer", fontSize: 12.5, fontWeight: 600, color: color.ink },
   leadsList: { display: "flex", flexDirection: "column", gap: 4, marginTop: 10 },
-  leadRow: { display: "flex", alignItems: "center", gap: 12, padding: "10px 4px", borderBottom: `1px solid ${color.borderSoft}` },
+  leadRow: { display: "flex", alignItems: "center", gap: 12, padding: "10px 4px", borderBottom: `1px solid ${color.borderSoft}`, width: "100%", background: "none", border: "none", borderBottomWidth: 1, borderBottomStyle: "solid", borderBottomColor: color.borderSoft, cursor: "pointer", fontFamily: "inherit" },
   leadAvatar: { width: 32, height: 32, borderRadius: "50%", background: color.accentSoft, color: color.accentDeep, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 12.5, flex: "0 0 auto" },
   leadName: { fontSize: 13, fontWeight: 600 },
   leadContact: { fontSize: 11.5, color: color.inkSoft },
   leadDate: { fontSize: 11, color: color.inkFaint },
+  leadChevron: { color: color.inkFaint, fontSize: 14, flex: "0 0 auto", transition: "transform .15s ease" },
+
+  leadConvoBox: { display: "flex", flexDirection: "column", gap: 8, padding: "12px 12px 14px 48px", background: "#FBFBFD", borderBottom: `1px solid ${color.borderSoft}` },
+  leadConvoNote: { fontSize: 12, color: color.inkFaint, fontStyle: "italic" },
+  leadMsgVisitor: { alignSelf: "flex-start", maxWidth: "85%", background: "#fff", border: `1px solid ${color.borderSoft}`, borderRadius: "4px 10px 10px 10px", padding: "8px 11px", fontSize: 12.5, lineHeight: 1.5 },
+  leadMsgBot: { alignSelf: "flex-end", maxWidth: "85%", background: color.accentSoft, borderRadius: "10px 4px 10px 10px", padding: "8px 11px", fontSize: 12.5, lineHeight: 1.5, color: color.accentDeep },
+  leadMsgRole: { display: "block", fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", opacity: 0.6, marginBottom: 2 },
 
   loadingText: { color: color.inkSoft, fontSize: 13.5, padding: "40px 0" },
 };

@@ -198,5 +198,5 @@ const s = {
   userName: { fontSize: 12.5, fontWeight: 600 },
   userRole: { fontSize: 10.5, color: "#9EA0B4", textTransform: "capitalize" },
   settingsIcon: { width: 26, height: 26, borderRadius: 7, background: "rgba(255,255,255,.06)", color: "#C6C7D6", display: "flex", alignItems: "center", justifyContent: "center", flex: "0 0 auto" },
-  signOutBtn: { width: "100%", background: "rgba(255,255,255,.06)", color: "#E7E7F0", border: "1px solid rgba(255,255,255,.14)", padding: "8px", borderRadius: 8, cursor: "pointer", fontSize: 12.5 },
+  signOutBtn: { width: "100%", background: "rgba(255,255,255,.06)", color: "#E7E7F0", border: "1px solid rgba(255,255,255,.14)", padding: "8px", borderRadius: 100, cursor: "pointer", fontSize: 12.5 },
 };

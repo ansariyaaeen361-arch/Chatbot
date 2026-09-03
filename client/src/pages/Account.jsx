@@ -192,7 +192,7 @@ const s = {
   subtitle: { fontSize: 13.5, color: color.inkSoft, margin: 0 },
 
   verifyBanner: { display: "flex", justifyContent: "space-between", alignItems: "center", background: color.sidebar, color: "#E7E7F0", padding: "14px 18px", borderRadius: 12, marginBottom: 14 },
-  resendBtn: { background: "rgba(255,255,255,.1)", color: "#fff", border: "1px solid rgba(255,255,255,.18)", padding: "8px 14px", borderRadius: 8, cursor: "pointer", fontSize: 12.5, fontWeight: 600, whiteSpace: "nowrap" },
+  resendBtn: { background: "rgba(255,255,255,.1)", color: "#fff", border: "1px solid rgba(255,255,255,.18)", padding: "8px 14px", borderRadius: 100, cursor: "pointer", fontSize: 12.5, fontWeight: 600, whiteSpace: "nowrap" },
   toast: { background: color.successSoft, color: color.successText, padding: "9px 14px", borderRadius: 8, fontSize: 12.5, fontWeight: 600, marginBottom: 14 },
 
   card: { position: "relative", background: color.surface, border: `1px solid ${color.border}`, borderRadius: 14, padding: "24px 24px 24px 28px", overflow: "hidden" },
@@ -204,7 +204,7 @@ const s = {
   input: { width: "100%", boxSizing: "border-box", padding: "10px 12px", border: `1px solid ${color.border}`, borderRadius: 9, fontSize: 13.5, fontFamily: "inherit", background: "#FBFBFD", color: color.ink },
   twoCol: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 },
 
-  primaryBtn: { background: color.accent, color: "#fff", border: "none", padding: "10px 20px", borderRadius: 9, fontWeight: 600, fontSize: 13.5, cursor: "pointer" },
+  primaryBtn: { background: color.accent, color: "#fff", border: "none", padding: "10px 20px", borderRadius: 100, fontWeight: 600, fontSize: 13.5, cursor: "pointer" },
 
   errorBox: { background: color.dangerSoft, color: color.danger, padding: "9px 12px", borderRadius: 8, fontSize: 12.5, marginBottom: 14 },
   successBox: { background: color.successSoft, color: color.successText, padding: "9px 12px", borderRadius: 8, fontSize: 12.5, marginBottom: 14 },

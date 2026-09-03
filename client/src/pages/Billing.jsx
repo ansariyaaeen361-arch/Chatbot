@@ -203,17 +203,17 @@ const s = {
   planPeriod: { fontSize: 13, fontWeight: 400, color: color.inkSoft },
   savingsText: { fontSize: 11.5, color: color.successText, fontWeight: 600, marginTop: -14, marginBottom: 14 },
 
-  cycleToggle: { display: "inline-flex", background: color.borderSoft, borderRadius: 10, padding: 4, gap: 4, marginTop: 20, marginBottom: 8 },
-  cycleBtn: { border: "none", background: "none", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, color: color.inkSoft, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 },
+  cycleToggle: { display: "inline-flex", background: color.borderSoft, borderRadius: 100, padding: 4, gap: 4, marginTop: 20, marginBottom: 8 },
+  cycleBtn: { border: "none", background: "none", padding: "8px 16px", borderRadius: 100, fontSize: 13, fontWeight: 600, color: color.inkSoft, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 },
   cycleBtnActive: { background: color.surface, color: color.ink, boxShadow: "0 1px 4px rgba(26,27,46,.08)" },
   saveBadge: { fontSize: 10, fontWeight: 700, color: color.successText, background: color.successSoft, padding: "2px 7px", borderRadius: 999 },
   featureList: { listStyle: "none", padding: 0, margin: "0 0 20px", display: "flex", flexDirection: "column", gap: 10 },
   featureItem: { display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: color.ink },
   checkIcon: { color: color.accent, flex: "0 0 auto" },
 
-  primaryBtn: { width: "100%", background: color.ink, color: "#fff", border: "none", padding: "12px", borderRadius: 10, fontWeight: 600, fontSize: 13.5, cursor: "pointer" },
-  primaryBtnPopular: { width: "100%", background: color.accent, color: "#fff", border: "none", padding: "12px", borderRadius: 10, fontWeight: 600, fontSize: 13.5, cursor: "pointer" },
-  currentBtn: { width: "100%", background: color.borderSoft, color: color.inkSoft, border: "none", padding: "12px", borderRadius: 10, fontWeight: 600, fontSize: 13.5 },
+  primaryBtn: { width: "100%", background: color.ink, color: "#fff", border: "none", padding: "12px", borderRadius: 100, fontWeight: 600, fontSize: 13.5, cursor: "pointer" },
+  primaryBtnPopular: { width: "100%", background: color.accent, color: "#fff", border: "none", padding: "12px", borderRadius: 100, fontWeight: 600, fontSize: 13.5, cursor: "pointer" },
+  currentBtn: { width: "100%", background: color.borderSoft, color: color.inkSoft, border: "none", padding: "12px", borderRadius: 100, fontWeight: 600, fontSize: 13.5 },
   cancelLink: { background: "none", border: "none", color: color.danger, fontSize: 12.5, textDecoration: "underline", cursor: "pointer", marginBottom: 24 },
 
   usageCard: { padding: 22 },

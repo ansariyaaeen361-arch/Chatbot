@@ -200,11 +200,11 @@ const s = {
   cardTitle: { fontSize: 16, fontWeight: 700, margin: "0 0 4px", fontFamily: "'Space Grotesk', sans-serif" },
   cardDesc: { fontSize: 12.5, color: color.inkSoft, margin: "0 0 16px" },
 
-  row: { display: "flex", gap: 14 },
+  row: { display: "flex", flexWrap: "wrap", gap: 14 },
   label: { display: "block", fontSize: 12, color: color.inkSoft, fontWeight: 600, marginBottom: 6 },
   input: { width: "100%", boxSizing: "border-box", padding: "10px 12px", border: `1px solid ${color.border}`, borderRadius: 9, fontSize: 13.5, fontFamily: "inherit", background: "#FBFBFD" },
 
-  primaryBtn: { background: color.accent, color: "#fff", border: "none", padding: "11px 22px", borderRadius: 9, fontWeight: 600, fontSize: 13.5, cursor: "pointer", marginTop: 4, display: "inline-block", textDecoration: "none" },
+  primaryBtn: { background: color.accent, color: "#fff", border: "none", padding: "11px 22px", borderRadius: 100, fontWeight: 600, fontSize: 13.5, cursor: "pointer", marginTop: 4, display: "inline-block", textDecoration: "none" },
 
   toggleRow: { display: "flex", alignItems: "center", gap: 10, cursor: "pointer" },
   toggleLabel: { fontSize: 13, color: color.inkSoft },
@@ -221,5 +221,5 @@ const s = {
   roleBadgeOwner: { background: "#F3E4C7", color: "#8A5A1F" },
   roleBadgeAdmin: { background: color.accentSoft, color: color.accentDeep },
   roleBadgeAgent: { background: color.borderSoft, color: color.inkSoft },
-  chipRemove: { background: color.borderSoft, border: "none", borderRadius: 8, cursor: "pointer", padding: "0 12px", height: 30, color: color.danger, fontSize: 13, marginLeft: 10, flex: "0 0 auto" },
+  chipRemove: { background: color.borderSoft, border: "none", borderRadius: 100, cursor: "pointer", padding: "0 12px", height: 30, color: color.danger, fontSize: 13, marginLeft: 10, flex: "0 0 auto" },
 };

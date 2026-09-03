@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const chatLogSchema = new mongoose.Schema({
   businessId: { type: mongoose.Schema.Types.ObjectId, ref: 'Business', required: true },
+  sessionId: { type: String, default: '' },
   userMessage: { type: String, required: true },
   aiReply: { type: String, default: '' },
   source: { type: String, enum: ['faq', 'ai', 'greeting', 'limit_reached'], required: true },

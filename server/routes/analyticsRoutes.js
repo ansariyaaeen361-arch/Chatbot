@@ -11,6 +11,7 @@ const {
   getMissedFaqs,
   getAgentStats,
   getLeads,
+  getLeadConversation,
   exportLeadsCsv
 } = require('../controllers/analyticsController');
 
@@ -19,6 +20,7 @@ router.get('/top-questions', auth, requireVerified, requireSeatCompliance, requi
 router.get('/missed-faqs', auth, requireVerified, requireSeatCompliance, requireRole('owner', 'admin'), requirePlanFeature('analytics'), getMissedFaqs);
 router.get('/agent-stats', auth, requireVerified, requireSeatCompliance, requireRole('owner', 'admin'), requirePlanFeature('analytics'), getAgentStats);
 router.get('/leads', auth, requireVerified, requireSeatCompliance, requireRole('owner', 'admin'), requirePlanFeature('analytics'), getLeads);
+router.get('/leads/:leadId/conversation', auth, requireVerified, requireSeatCompliance, requireRole('owner', 'admin'), requirePlanFeature('analytics'), getLeadConversation);
 router.get('/leads/export', auth, requireVerified, requireSeatCompliance, requireRole('owner', 'admin'), requirePlanFeature('analytics'), exportLeadsCsv);
 
 module.exports = router;

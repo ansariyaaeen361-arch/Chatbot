@@ -164,6 +164,27 @@ exports.getLeads = async (req, res) => {
   }
 };
 
+// The widget chat, not just the lead-capture form — what the visitor actually
+// asked and how the bot answered, so the leads list isn't just a name and email.
+exports.getLeadConversation = async (req, res) => {
+  try {
+    const lead = await Lead.findOne({ _id: req.params.leadId, businessId: req.user.businessId });
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+    if (!lead.sessionId) return res.json({ messages: [], note: 'No linked conversation for this lead.' });
+
+    const logs = await ChatLog.find({ businessId: req.user.businessId, sessionId: lead.sessionId }).sort({ createdAt: 1 });
+    const messages = [];
+    logs.forEach(l => {
+      messages.push({ role: 'visitor', text: l.userMessage, at: l.createdAt });
+      if (l.aiReply) messages.push({ role: 'bot', text: l.aiReply, at: l.createdAt });
+    });
+    res.json({ messages });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
+  }
+};
+
 exports.exportLeadsCsv = async (req, res) => {
   try {
     const leads = await Lead.find({ businessId: req.user.businessId }).sort({ createdAt: -1 });

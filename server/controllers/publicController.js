@@ -76,13 +76,13 @@ exports.getPublicConfig = async (req, res) => {
 exports.createLead = async (req, res) => {
   try {
     const { businessId } = req.params;
-    const { name, email, phone } = req.body;
+    const { name, email, phone, sessionId } = req.body;
 
     if (!name || (!email && !phone)) {
       return res.status(400).json({ error: 'Name and email or phone required' });
     }
 
-    const lead = await Lead.create({ businessId, name, email, phone });
+    const lead = await Lead.create({ businessId, name, email, phone, sessionId: sessionId || '' });
     res.json({ success: true, leadId: lead._id });
 
     notifyOwnerOfLead(businessId, { name, email, phone }).catch((e) =>

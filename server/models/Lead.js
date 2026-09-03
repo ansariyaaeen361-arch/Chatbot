@@ -5,6 +5,7 @@ const leadSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, default: '' },
   phone: { type: String, default: '' },
+  sessionId: { type: String, default: '' },
   createdAt: { type: Date, default: Date.now }
 });
 

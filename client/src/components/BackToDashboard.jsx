@@ -25,5 +25,5 @@ function ArrowIcon() {
 }
 
 const s = {
-  link: { display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 600, color: color.inkSoft, textDecoration: "none", padding: "6px 10px 6px 8px", borderRadius: 8, marginBottom: 14 },
+  link: { display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 600, color: color.inkSoft, textDecoration: "none", padding: "6px 10px 6px 8px", borderRadius: 100, marginBottom: 14 },
 };

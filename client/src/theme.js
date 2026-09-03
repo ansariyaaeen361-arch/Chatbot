@@ -142,7 +142,10 @@ ${fontImport}
 }
 .forge-launcher-ring { position: absolute; inset: 0; border-radius: 50%; animation: forgeRingPulse 2.6s cubic-bezier(0,0,.2,1) infinite; pointer-events: none; }
 
-@media (max-width: 1240px) {
+.forge-two-col { display: flex; flex-wrap: wrap; gap: 16px; }
+.forge-two-col > * { flex: 1 1 220px; min-width: 0; }
+
+@media (max-width: 1400px) {
   .forge-preview-col { display: none !important; }
   .forge-main-col { max-width: 820px !important; }
 }
@@ -161,6 +164,7 @@ ${fontImport}
   .forge-panel.forge-panel-open { display: flex !important; }
   .forge-main { padding: 20px 16px 80px !important; }
   .forge-topbar-inner { padding: 12px 16px !important; }
+  .forge-page-body { padding: 20px 16px 80px !important; gap: 20px !important; flex-direction: column !important; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -40,7 +40,7 @@ exports.chat = async (req, res) => {
     const conversationCap = getPlanConfig(business.plan).conversationCap;
     if (business.monthlyConversationsUsed > conversationCap) {
       await business.save();
-      ChatLog.create({ businessId, userMessage: userText, source: 'limit_reached' }).catch(() => {});
+      ChatLog.create({ businessId, sessionId, userMessage: userText, source: 'limit_reached' }).catch(() => {});
       return res.json({
         reply: "We're experiencing high demand right now. Please reach out to our team directly and they'll help you out.",
         source: 'limit_reached'
@@ -51,7 +51,7 @@ exports.chat = async (req, res) => {
     const isFirstTurn = !messages.some(m => m.role === 'assistant');
     if (isFirstTurn && GREETING_ONLY_PATTERN.test(userText.trim())) {
       await business.save();
-      ChatLog.create({ businessId, userMessage: userText, source: 'greeting' }).catch(() => {});
+      ChatLog.create({ businessId, sessionId, userMessage: userText, source: 'greeting' }).catch(() => {});
       return res.json({ reply: business.welcomeMessage || 'Hi! How can I help you today?', source: 'greeting' });
     }
 
@@ -71,7 +71,7 @@ exports.chat = async (req, res) => {
 
       if (result.length > 0 && result[0].score <= FAQ_MATCH_SCORE_CUTOFF) {
         await business.save();
-        ChatLog.create({ businessId, userMessage: userText, source: 'faq' }).catch(() => {});
+        ChatLog.create({ businessId, sessionId, userMessage: userText, source: 'faq' }).catch(() => {});
         return res.json({ reply: result[0].item.answer, source: 'faq' });
       }
 
@@ -91,7 +91,7 @@ exports.chat = async (req, res) => {
     // ---- 2. Check spend cap before calling AI (fresh read narrows the race window) ----
     const spendCheck = await Business.findById(businessId).select('monthlySpendUsed monthlySpendCap');
     if (spendCheck.monthlySpendUsed >= spendCheck.monthlySpendCap) {
-      ChatLog.create({ businessId, userMessage: userText, source: 'limit_reached' }).catch(() => {});
+      ChatLog.create({ businessId, sessionId, userMessage: userText, source: 'limit_reached' }).catch(() => {});
       return res.json({
         reply: "We're experiencing high demand right now. Please reach out to our team directly and they'll help you out.",
         source: 'limit_reached'
@@ -142,7 +142,7 @@ exports.chat = async (req, res) => {
 
     let chatLogId = null;
     try {
-      const log = await ChatLog.create({ businessId, userMessage: userText, aiReply: reply, source: 'ai' });
+      const log = await ChatLog.create({ businessId, sessionId, userMessage: userText, aiReply: reply, source: 'ai' });
       chatLogId = log._id;
     } catch {}
 
