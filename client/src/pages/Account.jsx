@@ -90,7 +90,7 @@ export default function Account() {
       <div style={layout.shell} className="forge-shell">
         <style>{globalStyles}</style>
         <Sidebar />
-        <main style={layout.main(640)} className="forge-main">
+        <main style={layout.main(980)} className="forge-main">
           <div style={s.loadingText}>Loading account…</div>
         </main>
       </div>
@@ -102,7 +102,7 @@ export default function Account() {
       <style>{globalStyles}</style>
       <Sidebar />
 
-      <main style={layout.main(640)} className="forge-main">
+      <main style={layout.main(980)} className="forge-main">
         <BackToDashboard />
         <header style={s.header}>
           <div style={s.eyebrow}>Workspace</div>
@@ -123,53 +123,53 @@ export default function Account() {
         )}
         {resendMsg && <div style={s.toast}>{resendMsg}</div>}
 
-        <div className="forge-card" style={s.card}>
-          <div style={s.cardAccentBar} />
-          <h2 style={s.cardTitle}>Profile</h2>
-          <p style={s.cardDesc}>Your name and login email.</p>
+        <div style={s.row} className="forge-home-row">
+          <div className="forge-card" style={{ ...s.card, flex: "1 1 50%", minWidth: 0 }}>
+            <div style={s.cardAccentBar} />
+            <h2 style={s.cardTitle}>Profile</h2>
+            <p style={s.cardDesc}>Your name and login email.</p>
 
-          <form onSubmit={saveProfile} style={{ marginTop: 16 }}>
-            {profileErr && <div style={s.errorBox}>{profileErr}</div>}
-            {profileMsg && <div style={s.successBox}>{profileMsg}</div>}
+            <form onSubmit={saveProfile} style={{ marginTop: 16 }}>
+              {profileErr && <div style={s.errorBox}>{profileErr}</div>}
+              {profileMsg && <div style={s.successBox}>{profileMsg}</div>}
 
-            <Field label="Full name">
-              <input className="forge-input" style={s.input} value={name} onChange={(e) => setName(e.target.value)} required />
-            </Field>
-            <Field label="Email">
-              <input className="forge-input" style={s.input} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            </Field>
+              <Field label="Full name">
+                <input className="forge-input" style={s.input} value={name} onChange={(e) => setName(e.target.value)} required />
+              </Field>
+              <Field label="Email">
+                <input className="forge-input" style={s.input} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              </Field>
 
-            <button className="forge-btn-primary" style={s.primaryBtn} type="submit" disabled={savingProfile}>
-              {savingProfile ? "Saving…" : "Save profile"}
-            </button>
-          </form>
-        </div>
+              <button className="forge-btn-primary" style={s.primaryBtn} type="submit" disabled={savingProfile}>
+                {savingProfile ? "Saving…" : "Save profile"}
+              </button>
+            </form>
+          </div>
 
-        <div className="forge-card" style={{ ...s.card, marginTop: 20 }}>
-          <div style={s.cardAccentBar} />
-          <h2 style={s.cardTitle}>Password</h2>
-          <p style={s.cardDesc}>Choose a new password (at least 6 characters).</p>
+          <div className="forge-card" style={{ ...s.card, flex: "1 1 50%", minWidth: 0 }}>
+            <div style={s.cardAccentBar} />
+            <h2 style={s.cardTitle}>Password</h2>
+            <p style={s.cardDesc}>Choose a new password (at least 6 characters).</p>
 
-          <form onSubmit={savePassword} style={{ marginTop: 16 }}>
-            {passwordErr && <div style={s.errorBox}>{passwordErr}</div>}
-            {passwordMsg && <div style={s.successBox}>{passwordMsg}</div>}
+            <form onSubmit={savePassword} style={{ marginTop: 16 }}>
+              {passwordErr && <div style={s.errorBox}>{passwordErr}</div>}
+              {passwordMsg && <div style={s.successBox}>{passwordMsg}</div>}
 
-            <Field label="Current password">
-              <input className="forge-input" style={s.input} type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
-            </Field>
-            <div style={s.twoCol}>
+              <Field label="Current password">
+                <input className="forge-input" style={s.input} type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
+              </Field>
               <Field label="New password">
                 <input className="forge-input" style={s.input} type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={6} />
               </Field>
               <Field label="Confirm new password">
                 <input className="forge-input" style={s.input} type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} />
               </Field>
-            </div>
 
-            <button className="forge-btn-primary" style={s.primaryBtn} type="submit" disabled={savingPassword}>
-              {savingPassword ? "Updating…" : "Update password"}
-            </button>
-          </form>
+              <button className="forge-btn-primary" style={s.primaryBtn} type="submit" disabled={savingPassword}>
+                {savingPassword ? "Updating…" : "Update password"}
+              </button>
+            </form>
+          </div>
         </div>
       </main>
     </div>
@@ -195,6 +195,7 @@ const s = {
   resendBtn: { background: "rgba(255,255,255,.1)", color: "#fff", border: "1px solid rgba(255,255,255,.18)", padding: "8px 14px", borderRadius: 100, cursor: "pointer", fontSize: 12.5, fontWeight: 600, whiteSpace: "nowrap" },
   toast: { background: color.successSoft, color: color.successText, padding: "9px 14px", borderRadius: 8, fontSize: 12.5, fontWeight: 600, marginBottom: 14 },
 
+  row: { display: "flex", gap: 20, alignItems: "flex-start" },
   card: { position: "relative", background: color.surface, border: `1px solid ${color.border}`, borderRadius: 14, padding: "24px 24px 24px 28px", overflow: "hidden" },
   cardAccentBar: { position: "absolute", left: 0, top: 0, bottom: 0, width: 4, background: color.accent },
   cardTitle: { fontSize: 17, fontWeight: 700, margin: "0 0 4px", letterSpacing: "-0.01em", fontFamily: "'Space Grotesk', sans-serif" },
@@ -202,7 +203,6 @@ const s = {
 
   label: { display: "block", fontSize: 12, color: color.inkSoft, fontWeight: 600, marginBottom: 6 },
   input: { width: "100%", boxSizing: "border-box", padding: "10px 12px", border: `1px solid ${color.border}`, borderRadius: 9, fontSize: 13.5, fontFamily: "inherit", background: "#FBFBFD", color: color.ink },
-  twoCol: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 },
 
   primaryBtn: { background: color.accent, color: "#fff", border: "none", padding: "10px 20px", borderRadius: 100, fontWeight: 600, fontSize: 13.5, cursor: "pointer" },
 

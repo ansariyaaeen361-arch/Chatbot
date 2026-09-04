@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/axios";
@@ -19,6 +19,7 @@ export default function Team() {
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
   const [inviting, setInviting] = useState(false);
+  const [teamSearch, setTeamSearch] = useState("");
 
   const isAdmin = user?.role === "owner" || user?.role === "admin";
 
@@ -41,6 +42,12 @@ export default function Team() {
       setSavingAutoAssign(false);
     }
   }
+
+  const filteredTeam = useMemo(() => {
+    const q = teamSearch.trim().toLowerCase();
+    if (!q) return team;
+    return team.filter((t) => t.name.toLowerCase().includes(q) || t.email.toLowerCase().includes(q));
+  }, [team, teamSearch]);
 
   function loadTeam() {
     api.get("/business/team").then((res) => setTeam(res.data));
@@ -79,7 +86,7 @@ export default function Team() {
       <style>{globalStyles}</style>
       <Sidebar />
 
-      <main style={layout.main(640)} className="forge-main">
+      <main style={layout.main(1100)} className="forge-main">
         <BackToDashboard />
         <header style={s.header}>
           <div style={s.eyebrow}>Workspace</div>
@@ -87,93 +94,104 @@ export default function Team() {
           <p style={s.subtitle}>Add the people who'll pick up live chats and manage this workspace.</p>
         </header>
 
-        {isAdmin && ["trial", "starter"].includes(businessPlan) && (
-          <div className="forge-card" style={s.card}>
-            <h2 style={s.cardTitle}>Add a team member</h2>
-            <p style={s.cardDesc}>Team members are available on Growth and Pro plans.</p>
-            <Link to="/billing" className="forge-btn-primary" style={s.primaryBtn}>Upgrade your plan →</Link>
-          </div>
-        )}
-
-        {isAdmin && businessPlan && !["trial", "starter"].includes(businessPlan) && (
-          <div className="forge-card" style={s.card}>
-            <h2 style={s.cardTitle}>Add a team member</h2>
-            <p style={s.cardDesc}>Share these login details with them directly so they can sign in with this email and password.</p>
-
-            <form onSubmit={handleInvite}>
-              {error && <div style={s.error}>{error}</div>}
-              {msg && <div style={s.success}>{msg}</div>}
-
-              <div style={s.row}>
-                <Field label="Full name">
-                  <input className="forge-input" style={s.input} value={name} onChange={(e) => setName(e.target.value)} required />
-                </Field>
-                <Field label="Role">
-                  <select className="forge-input" style={s.input} value={role} onChange={(e) => setRole(e.target.value)}>
-                    <option value="agent">Agent (handles their own chats)</option>
-                    {user?.role === "owner" && <option value="admin">Admin (sees everything)</option>}
-                  </select>
-                </Field>
+        <div style={s.teamRow2col} className="forge-home-row">
+          <div style={s.leftCol}>
+            {isAdmin && ["trial", "starter"].includes(businessPlan) && (
+              <div className="forge-card" style={s.card}>
+                <h2 style={s.cardTitle}>Add a team member</h2>
+                <p style={s.cardDesc}>Team members are available on Growth and Pro plans.</p>
+                <Link to="/billing" className="forge-btn-primary" style={s.primaryBtn}>Upgrade your plan →</Link>
               </div>
+            )}
 
-              <div style={s.row}>
-                <Field label="Email">
-                  <input className="forge-input" style={s.input} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                </Field>
-                <Field label="Temporary password">
-                  <input className="forge-input" style={s.input} type="text" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
-                </Field>
+            {isAdmin && businessPlan && !["trial", "starter"].includes(businessPlan) && (
+              <div className="forge-card" style={s.card}>
+                <h2 style={s.cardTitle}>Add a team member</h2>
+                <p style={s.cardDesc}>Share these login details with them directly so they can sign in with this email and password.</p>
+
+                <form onSubmit={handleInvite}>
+                  {error && <div style={s.error}>{error}</div>}
+                  {msg && <div style={s.success}>{msg}</div>}
+
+                  <Field label="Full name">
+                    <input className="forge-input" style={s.input} value={name} onChange={(e) => setName(e.target.value)} required />
+                  </Field>
+                  <Field label="Role">
+                    <select className="forge-input" style={s.input} value={role} onChange={(e) => setRole(e.target.value)}>
+                      <option value="agent">Agent (handles their own chats)</option>
+                      {user?.role === "owner" && <option value="admin">Admin (sees everything)</option>}
+                    </select>
+                  </Field>
+                  <Field label="Email">
+                    <input className="forge-input" style={s.input} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  </Field>
+                  <Field label="Temporary password">
+                    <input className="forge-input" style={s.input} type="text" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+                  </Field>
+
+                  <button className="forge-btn-primary" style={s.primaryBtn} type="submit" disabled={inviting}>
+                    {inviting ? "Adding…" : "Add team member"}
+                  </button>
+                </form>
               </div>
+            )}
 
-              <button className="forge-btn-primary" style={s.primaryBtn} type="submit" disabled={inviting}>
-                {inviting ? "Adding…" : "Add team member"}
-              </button>
-            </form>
-          </div>
-        )}
-
-        {isAdmin && team.length > 1 && (
-          <div className="forge-card" style={{ ...s.card, marginTop: 20 }}>
-            <h2 style={s.cardTitle}>Chat assignment</h2>
-            <p style={s.cardDesc}>When someone starts a live chat, automatically hand it to whichever teammate has the fewest active chats right now, instead of leaving it in the waiting queue for someone to accept.</p>
-            <label style={s.toggleRow}>
-              <span className="forge-toggle">
-                <input type="checkbox" checked={autoAssign} onChange={(e) => toggleAutoAssign(e.target.checked)} disabled={savingAutoAssign} />
-                <span className="forge-toggle-track" />
-              </span>
-              <span style={s.toggleLabel}>{autoAssign ? "Auto-assign to least-busy teammate" : "Off — chats wait in the queue to be accepted"}</span>
-            </label>
-          </div>
-        )}
-
-        <div className="forge-card" style={{ ...s.card, marginTop: 20 }}>
-          <h2 style={s.cardTitle}>Current team ({team.length})</h2>
-          <div style={s.teamList}>
-            {team.map((t) => {
-              const isSelf = t.email === user?.email;
-              return (
-                <div key={t._id} style={s.teamRow}>
-                  <div style={s.teamAvatar}>{t.name.charAt(0).toUpperCase()}</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={s.teamName}>{t.name}</div>
-                    <div style={s.teamEmail}>{t.email}</div>
-                  </div>
-                  <span style={{ ...s.roleBadge, ...(t.role === "owner" ? s.roleBadgeOwner : t.role === "admin" ? s.roleBadgeAdmin : s.roleBadgeAgent) }}>
-                    {t.role}
+            {isAdmin && team.length > 1 && (
+              <div className="forge-card" style={{ ...s.card, marginTop: 16 }}>
+                <h2 style={s.cardTitle}>Chat assignment</h2>
+                <p style={s.cardDesc}>Automatically hand new live chats to whichever teammate has the fewest active chats right now, instead of leaving them in the waiting queue.</p>
+                <label style={s.toggleRow}>
+                  <span className="forge-toggle">
+                    <input type="checkbox" checked={autoAssign} onChange={(e) => toggleAutoAssign(e.target.checked)} disabled={savingAutoAssign} />
+                    <span className="forge-toggle-track" />
                   </span>
-                  {isAdmin && !isSelf && (
-                    <button
-                      className="forge-chip-remove"
-                      style={s.chipRemove}
-                      title={`Remove ${t.name}`}
-                      onClick={() => handleRemove(t)}
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-              );
-            })}
+                  <span style={s.toggleLabel}>{autoAssign ? "Auto-assign to least-busy teammate" : "Off — chats wait in the queue to be accepted"}</span>
+                </label>
+              </div>
+            )}
+          </div>
+
+          <div className="forge-card" style={s.rightCol}>
+            <div style={s.teamListHeader}>
+              <h2 style={s.cardTitle}>Current team ({filteredTeam.length}{teamSearch ? ` of ${team.length}` : ""})</h2>
+              {team.length > 5 && (
+                <input
+                  className="forge-input"
+                  style={s.teamSearchInput}
+                  placeholder="Search team…"
+                  value={teamSearch}
+                  onChange={(e) => setTeamSearch(e.target.value)}
+                />
+              )}
+            </div>
+            <div style={s.teamList} className="forge-scroll-list">
+              {filteredTeam.length === 0 && team.length > 0 && <p style={s.cardDesc}>No teammates match "{teamSearch}".</p>}
+              {filteredTeam.map((t) => {
+                const isSelf = t.email === user?.email;
+                return (
+                  <div key={t._id} style={s.teamMemberRow}>
+                    <div style={s.teamAvatar}>{t.name.charAt(0).toUpperCase()}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={s.teamName}>{t.name}</div>
+                      <div style={s.teamEmail}>{t.email}</div>
+                    </div>
+                    <span style={{ ...s.roleBadge, ...(t.role === "owner" ? s.roleBadgeOwner : t.role === "admin" ? s.roleBadgeAdmin : s.roleBadgeAgent) }}>
+                      {t.role}
+                    </span>
+                    {isAdmin && !isSelf && (
+                      <button
+                        className="forge-chip-remove"
+                        style={s.chipRemove}
+                        title={`Remove ${t.name}`}
+                        onClick={() => handleRemove(t)}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </main>
@@ -200,7 +218,10 @@ const s = {
   cardTitle: { fontSize: 16, fontWeight: 700, margin: "0 0 4px", fontFamily: "'Space Grotesk', sans-serif" },
   cardDesc: { fontSize: 12.5, color: color.inkSoft, margin: "0 0 16px" },
 
-  row: { display: "flex", flexWrap: "wrap", gap: 14 },
+  teamRow2col: { display: "flex", gap: 16, alignItems: "flex-start" },
+  leftCol: { flex: "1 1 42%", minWidth: 0, display: "flex", flexDirection: "column" },
+  rightCol: { flex: "1 1 58%", minWidth: 0, background: color.surface, border: `1px solid ${color.border}`, borderRadius: 14, padding: 24 },
+
   label: { display: "block", fontSize: 12, color: color.inkSoft, fontWeight: 600, marginBottom: 6 },
   input: { width: "100%", boxSizing: "border-box", padding: "10px 12px", border: `1px solid ${color.border}`, borderRadius: 9, fontSize: 13.5, fontFamily: "inherit", background: "#FBFBFD" },
 
@@ -212,8 +233,10 @@ const s = {
   error: { background: color.dangerSoft, color: color.danger, padding: "9px 12px", borderRadius: 8, fontSize: 12.5, marginBottom: 14 },
   success: { background: color.successSoft, color: color.successText, padding: "9px 12px", borderRadius: 8, fontSize: 12.5, marginBottom: 14 },
 
-  teamList: { display: "flex", flexDirection: "column", gap: 10 },
-  teamRow: { display: "flex", alignItems: "center", gap: 12, padding: "10px 4px", borderBottom: `1px solid ${color.borderSoft}` },
+  teamListHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 4 },
+  teamSearchInput: { padding: "7px 12px", borderRadius: 100, fontSize: 12.5, width: 180, border: `1px solid ${color.border}`, background: "#FBFBFD" },
+  teamList: { display: "flex", flexDirection: "column", gap: 4, marginTop: 10, maxHeight: 480, overflowY: "auto", paddingRight: 4 },
+  teamMemberRow: { display: "flex", alignItems: "center", gap: 12, padding: "10px 4px", borderBottom: `1px solid ${color.borderSoft}` },
   teamAvatar: { width: 34, height: 34, borderRadius: "50%", background: color.accentSoft, color: color.accentDeep, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 13.5, flex: "0 0 auto" },
   teamName: { fontSize: 13.5, fontWeight: 600 },
   teamEmail: { fontSize: 12, color: color.inkSoft },

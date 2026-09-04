@@ -2,14 +2,14 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { color } from "../theme";
 
-// Only owner/admin actually have a Dashboard to go back to (the /dashboard route
+// Only owner/admin actually have a Home to go back to (the /home route
 // itself is role-gated), so this renders nothing for other roles like "agent".
 export default function BackToDashboard() {
   const { user } = useAuth();
   if (!user || !["owner", "admin"].includes(user.role)) return null;
 
   return (
-    <Link to="/dashboard" style={s.link} className="forge-ghost">
+    <Link to="/home" style={s.link} className="forge-ghost">
       <ArrowIcon />
       Back
     </Link>

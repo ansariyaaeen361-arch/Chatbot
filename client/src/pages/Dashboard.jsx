@@ -8,8 +8,6 @@ import { color, radius, shadow, layout, globalStyles } from "../theme";
 
 const API_ORIGIN = (api.defaults.baseURL || "").replace(/\/api\/?$/, "");
 
-const SECTION_IDS = ["quickstart", "profile", "branding", "hours", "faqs", "knowledge", "crm", "embed"];
-
 const SETUP_SECTIONS = [
   ["quickstart", "01", "Quick start"],
   ["profile", "02", "Business profile"],
@@ -43,7 +41,10 @@ export default function Dashboard() {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [activeSection, setActiveSection] = useState("quickstart");
+  const [activeSection, setActiveSection] = useState(() => {
+    const requested = new URLSearchParams(window.location.search).get("section");
+    return SETUP_SECTIONS.some((sec) => sec[0] === requested) ? requested : "quickstart";
+  });
 
   const [knowledgeTitle, setKnowledgeTitle] = useState("");
   const [knowledgeContent, setKnowledgeContent] = useState("");
@@ -56,7 +57,6 @@ export default function Dashboard() {
 
   const [faqSearch, setFaqSearch] = useState("");
   const [openFaqs, setOpenFaqs] = useState(() => new Set());
-  const [showBackToTop, setShowBackToTop] = useState(false);
   const [crmTestResult, setCrmTestResult] = useState(null);
 
   useEffect(() => {
@@ -64,28 +64,8 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    if (!business) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) setActiveSection(entry.target.id);
-        });
-      },
-      { rootMargin: "-15% 0px -75% 0px", threshold: 0 }
-    );
-    SECTION_IDS.forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) observer.observe(el);
-    });
-    return () => observer.disconnect();
-  }, [business]);
-
-  useEffect(() => {
-    const onScroll = () => setShowBackToTop(window.scrollY > 480);
-    window.addEventListener("scroll", onScroll);
-    onScroll();
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+    window.scrollTo({ top: 0 });
+  }, [activeSection]);
 
   const updateField = (field, value) => {
     setBusiness((prev) => ({ ...prev, [field]: value }));
@@ -371,12 +351,12 @@ export default function Dashboard() {
       <style>{globalStyles}</style>
       <Sidebar setupSections={SETUP_SECTIONS} activeSection={activeSection} onSectionClick={setActiveSection} />
 
-      <div style={layout.content}>
+      <div style={layout.content} className="forge-content">
         <div className="forge-topbar">
           <div style={s.topbarInner} className="forge-topbar-inner">
             <div>
               <div style={s.eyebrow}>Workspace settings</div>
-              <h1 style={s.topbarTitle}>Set up your AI assistant</h1>
+              <h1 style={s.topbarTitle}>{SETUP_SECTIONS.find((sec) => sec[0] === activeSection)?.[2] || "Setup"}</h1>
             </div>
             {savedMsg && <div style={s.toast}>✓ {savedMsg}</div>}
           </div>
@@ -412,7 +392,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <section id="quickstart" style={s.section}>
+        {activeSection === "quickstart" && (
+        <section style={s.section}>
           <SectionCard
             step="01"
             icon="bolt"
@@ -434,8 +415,10 @@ export default function Dashboard() {
             </div>
           </SectionCard>
         </section>
+        )}
 
-        <section id="profile" style={s.section}>
+        {activeSection === "profile" && (
+        <section style={s.section}>
           <SectionCard
             step="02"
             icon="briefcase"
@@ -443,33 +426,37 @@ export default function Dashboard() {
             desc="This is what your AI assistant knows about you."
             info="Everything you fill in here is what your chatbot actually knows about your business. If it's blank or wrong, your chatbot won't be able to answer customers correctly."
           >
-            <Field label="Business name">
-              <input className="forge-input" style={s.input} value={business.name} onChange={(e) => updateField("name", e.target.value)} />
-            </Field>
-
-            <Field label="Website">
-              <input className="forge-input" style={s.input} value={business.website} onChange={(e) => updateField("website", e.target.value)} placeholder="https://yourbusiness.com" />
-            </Field>
-
-            <Field label="What does your business do?">
-              <textarea className="forge-input" style={{ ...s.input, height: 84, resize: "vertical" }} value={business.description} onChange={(e) => updateField("description", e.target.value)} />
-            </Field>
-
-            <div className="forge-two-col">
-              <Field label="Target customer">
-                <input className="forge-input" style={s.input} value={business.targetCustomer} onChange={(e) => updateField("targetCustomer", e.target.value)} />
+            <FieldGroup first>
+              <div className="forge-two-col">
+                <Field label="Business name">
+                  <input className="forge-input" style={s.input} value={business.name} onChange={(e) => updateField("name", e.target.value)} />
+                </Field>
+                <Field label="Website">
+                  <input className="forge-input" style={s.input} value={business.website} onChange={(e) => updateField("website", e.target.value)} placeholder="https://yourbusiness.com" />
+                </Field>
+              </div>
+              <Field label="What does your business do?">
+                <textarea className="forge-input" style={{ ...s.input, height: 84, resize: "vertical" }} value={business.description} onChange={(e) => updateField("description", e.target.value)} />
               </Field>
-              <Field label="Tone of voice">
-                <select className="forge-input" style={s.input} value={business.tone} onChange={(e) => updateField("tone", e.target.value)}>
-                  <option value="professional">Professional</option>
-                  <option value="friendly">Friendly</option>
-                  <option value="casual">Casual</option>
-                </select>
-              </Field>
-            </div>
+            </FieldGroup>
 
-            <Field label="Services">
-              <div style={s.chipList}>
+            <FieldGroup label="Audience & tone">
+              <div className="forge-two-col">
+                <Field label="Target customer">
+                  <input className="forge-input" style={s.input} value={business.targetCustomer} onChange={(e) => updateField("targetCustomer", e.target.value)} />
+                </Field>
+                <Field label="Tone of voice">
+                  <select className="forge-input" style={s.input} value={business.tone} onChange={(e) => updateField("tone", e.target.value)}>
+                    <option value="professional">Professional</option>
+                    <option value="friendly">Friendly</option>
+                    <option value="casual">Casual</option>
+                  </select>
+                </Field>
+              </div>
+            </FieldGroup>
+
+            <FieldGroup label="Services">
+              <div style={s.chipList} className="forge-scroll-list">
                 {business.services.map((svc, i) => (
                   <div key={i} style={s.chipRow}>
                     <input className="forge-input" style={s.chipInput} value={svc} onChange={(e) => updateService(i, e.target.value)} placeholder="e.g. Website design" />
@@ -478,11 +465,13 @@ export default function Dashboard() {
                 ))}
               </div>
               <button className="forge-ghost" style={s.ghostBtn} onClick={addService}>+ Add service</button>
-            </Field>
+            </FieldGroup>
           </SectionCard>
         </section>
+        )}
 
-        <section id="branding" style={s.section}>
+        {activeSection === "branding" && (
+        <section style={s.section}>
           <SectionCard
             step="03"
             icon="palette"
@@ -490,35 +479,37 @@ export default function Dashboard() {
             desc="Make the widget look like it belongs on your site."
             info="This controls how the chat widget looks to your visitors: your logo, colors, the first message it shows, and which corner of the screen it sits in."
           >
-            <div className="forge-two-col">
-              <Field label="Logo">
-                <div style={s.logoUploadRow}>
-                  <div className="forge-logo-box" style={s.logoPreviewBox}>
-                    {business.logoUrl
-                      ? <img src={`${API_ORIGIN}${business.logoUrl}`} alt="Logo preview" style={s.logoPreviewImg} />
-                      : <span style={s.logoPlaceholder}>{initial}</span>}
-                    {business.logoUrl && (
-                      <button className="forge-logo-remove" onClick={removeLogo} aria-label="Remove logo" title="Remove logo">
-                        <CloseIcon />
-                      </button>
-                    )}
+            <FieldGroup label="Identity" first>
+              <div className="forge-two-col">
+                <Field label="Logo">
+                  <div style={s.logoUploadRow}>
+                    <div className="forge-logo-box" style={s.logoPreviewBox}>
+                      {business.logoUrl
+                        ? <img src={`${API_ORIGIN}${business.logoUrl}`} alt="Logo preview" style={s.logoPreviewImg} />
+                        : <span style={s.logoPlaceholder}>{initial}</span>}
+                      {business.logoUrl && (
+                        <button className="forge-logo-remove" onClick={removeLogo} aria-label="Remove logo" title="Remove logo">
+                          <CloseIcon />
+                        </button>
+                      )}
+                    </div>
+                    <label className="forge-ghost" style={s.uploadBtn}>
+                       Upload
+                      <input type="file" accept="image/*" onChange={uploadLogo} style={{ display: "none" }} />
+                    </label>
                   </div>
-                  <label className="forge-ghost" style={s.uploadBtn}>
-                     Upload
-                    <input type="file" accept="image/*" onChange={uploadLogo} style={{ display: "none" }} />
-                  </label>
-                </div>
-              </Field>
-              <Field label="Brand color">
-                <div style={s.colorRow}>
-                  <input type="color" value={business.brandColor} onChange={(e) => updateField("brandColor", e.target.value)} style={s.colorSwatch} />
-                  <span style={s.colorHex}>{business.brandColor}</span>
-                </div>
-              </Field>
-            </div>
+                </Field>
+                <Field label="Brand color">
+                  <div style={s.colorRow}>
+                    <input type="color" value={business.brandColor} onChange={(e) => updateField("brandColor", e.target.value)} style={s.colorSwatch} />
+                    <span style={s.colorHex}>{business.brandColor}</span>
+                  </div>
+                </Field>
+              </div>
+            </FieldGroup>
 
-            <Field label="Call-to-action links">
-              <div style={s.ctaList}>
+            <FieldGroup label="Call-to-action links">
+              <div style={s.ctaList} className="forge-scroll-list">
                 {business.ctaLinks.map((c, i) => (
                   <div key={i} style={s.ctaRow}>
                     <input className="forge-input" style={{ ...s.input, flex: "0 0 140px" }} placeholder="Label" value={c.label} onChange={(e) => updateCta(i, "label", e.target.value)} />
@@ -528,77 +519,81 @@ export default function Dashboard() {
                 ))}
               </div>
               <button className="forge-ghost" style={s.ghostBtn} onClick={addCta}>+ Add link</button>
-            </Field>
+            </FieldGroup>
 
-            <Field label='"Powered by MentalForge AI" badge'>
-              {canRemoveBranding ? (
-                <label style={s.toggleRow}>
-                  <span className="forge-toggle">
-                    <input
-                      type="checkbox"
-                      checked={!business.hideBranding}
-                      onChange={(e) => updateField("hideBranding", !e.target.checked)}
-                    />
-                    <span className="forge-toggle-track" />
-                  </span>
-                  <span style={s.toggleLabel}>
-                    {business.hideBranding ? "Hidden from your widget" : "Shown on your widget"}
-                  </span>
-                </label>
-              ) : (
-                <div style={s.toggleRow}>
-                  <span style={s.toggleLabel}>Shown on your widget</span>
-                  <Link to="/billing" style={s.upgradeLink}>Available on the Growth and Pro plans. Upgrade →</Link>
-                </div>
-              )}
-            </Field>
-
-            <Field label="Welcome message">
-              <textarea
-                className="forge-input"
-                style={{ ...s.input, height: 60, resize: "vertical" }}
-                value={business.welcomeMessage || ""}
-                onChange={(e) => updateField("welcomeMessage", e.target.value)}
-                placeholder="Hi! How can I help you today?"
-              />
-            </Field>
-
-            <div className="forge-two-col">
-              <Field label="Launcher position">
-                <select
-                  className="forge-input"
-                  style={s.input}
-                  value={business.launcherPosition || "right"}
-                  onChange={(e) => updateField("launcherPosition", e.target.value)}
-                >
-                  <option value="right">Bottom right</option>
-                  <option value="left">Bottom left</option>
-                </select>
-              </Field>
-
-              <Field label="Launcher icon">
-                <div style={s.logoUploadRow}>
-                  <div className="forge-logo-box" style={s.logoPreviewBox}>
-                    {business.launcherType === "image" && business.launcherMediaUrl ? (
-                      <img src={`${API_ORIGIN}${business.launcherMediaUrl}`} alt="Launcher preview" style={s.logoPreviewImg} />
-                    ) : business.launcherType === "video" && business.launcherMediaUrl ? (
-                      <video src={`${API_ORIGIN}${business.launcherMediaUrl}`} style={s.logoPreviewImg} muted loop autoPlay playsInline />
-                    ) : (
-                      <span style={s.logoPlaceholder}>💬</span>
-                    )}
-                    {business.launcherType && business.launcherType !== "default" && (
-                      <button className="forge-logo-remove" onClick={removeLauncherMedia} aria-label="Reset to default icon" title="Reset to default icon">
-                        <CloseIcon />
-                      </button>
-                    )}
-                  </div>
-                  <label className="forge-ghost" style={s.uploadBtn}>
-                    Upload image / video
-                    <input type="file" accept=" image/*,video/*" onChange={uploadLauncherMedia} style={{ display: "none" }} />
+            <FieldGroup label="Widget behavior">
+              <Field label='"Powered by MentalForge AI" badge'>
+                {canRemoveBranding ? (
+                  <label style={s.toggleRow}>
+                    <span className="forge-toggle">
+                      <input
+                        type="checkbox"
+                        checked={!business.hideBranding}
+                        onChange={(e) => updateField("hideBranding", !e.target.checked)}
+                      />
+                      <span className="forge-toggle-track" />
+                    </span>
+                    <span style={s.toggleLabel}>
+                      {business.hideBranding ? "Hidden from your widget" : "Shown on your widget"}
+                    </span>
                   </label>
-                </div>
+                ) : (
+                  <div style={s.toggleRow}>
+                    <span style={s.toggleLabel}>Shown on your widget</span>
+                    <Link to="/billing" style={s.upgradeLink}>Available on the Growth and Pro plans. Upgrade →</Link>
+                  </div>
+                )}
               </Field>
-            </div>
+
+              <Field label="Welcome message">
+                <textarea
+                  className="forge-input"
+                  style={{ ...s.input, height: 60, resize: "vertical" }}
+                  value={business.welcomeMessage || ""}
+                  onChange={(e) => updateField("welcomeMessage", e.target.value)}
+                  placeholder="Hi! How can I help you today?"
+                />
+              </Field>
+            </FieldGroup>
+
+            <FieldGroup label="Launcher">
+              <div className="forge-two-col">
+                <Field label="Launcher position">
+                  <select
+                    className="forge-input"
+                    style={s.input}
+                    value={business.launcherPosition || "right"}
+                    onChange={(e) => updateField("launcherPosition", e.target.value)}
+                  >
+                    <option value="right">Bottom right</option>
+                    <option value="left">Bottom left</option>
+                  </select>
+                </Field>
+
+                <Field label="Launcher icon">
+                  <div style={s.logoUploadRow}>
+                    <div className="forge-logo-box" style={s.logoPreviewBox}>
+                      {business.launcherType === "image" && business.launcherMediaUrl ? (
+                        <img src={`${API_ORIGIN}${business.launcherMediaUrl}`} alt="Launcher preview" style={s.logoPreviewImg} />
+                      ) : business.launcherType === "video" && business.launcherMediaUrl ? (
+                        <video src={`${API_ORIGIN}${business.launcherMediaUrl}`} style={s.logoPreviewImg} muted loop autoPlay playsInline />
+                      ) : (
+                        <span style={s.logoPlaceholder}>💬</span>
+                      )}
+                      {business.launcherType && business.launcherType !== "default" && (
+                        <button className="forge-logo-remove" onClick={removeLauncherMedia} aria-label="Reset to default icon" title="Reset to default icon">
+                          <CloseIcon />
+                        </button>
+                      )}
+                    </div>
+                    <label className="forge-ghost" style={s.uploadBtn}>
+                      Upload image / video
+                      <input type="file" accept=" image/*,video/*" onChange={uploadLauncherMedia} style={{ display: "none" }} />
+                    </label>
+                  </div>
+                </Field>
+              </div>
+            </FieldGroup>
 
             <div style={s.cardFooterEnd}>
               <button className="forge-btn-primary" style={s.primaryBtn} onClick={saveProfile} disabled={saving}>
@@ -607,8 +602,10 @@ export default function Dashboard() {
             </div>
           </SectionCard>
         </section>
+        )}
 
-        <section id="hours" style={s.section}>
+        {activeSection === "hours" && (
+        <section style={s.section}>
           <SectionCard
             step="04"
             icon="clock"
@@ -631,7 +628,7 @@ export default function Dashboard() {
             </label>
 
             {business.businessHours?.enabled && (
-              <>
+              <FieldGroup label="Schedule">
                 <Field label="Timezone">
                   <select
                     className="forge-input"
@@ -678,7 +675,7 @@ export default function Dashboard() {
                     placeholder="We're currently offline. Leave your details and we'll get back to you."
                   />
                 </Field>
-              </>
+              </FieldGroup>
             )}
 
             <div style={s.cardFooterEnd}>
@@ -688,8 +685,10 @@ export default function Dashboard() {
             </div>
           </SectionCard>
         </section>
+        )}
 
-        <section id="faqs" style={s.section}>
+        {activeSection === "faqs" && (
+        <section style={s.section}>
           <SectionCard
             step="05"
             icon="help"
@@ -707,6 +706,7 @@ export default function Dashboard() {
               />
             )}
 
+            <div style={s.scrollList} className="forge-scroll-list">
             {(() => {
               const query = faqSearch.trim().toLowerCase();
               const visible = business.faqs
@@ -741,6 +741,7 @@ export default function Dashboard() {
                 );
               });
             })()}
+            </div>
 
             <div style={s.cardFooterRow}>
               <button className="forge-ghost" style={s.ghostBtn} onClick={addFaq}>+ Add FAQ</button>
@@ -748,8 +749,10 @@ export default function Dashboard() {
             </div>
           </SectionCard>
         </section>
+        )}
 
-        <section id="knowledge" style={s.section}>
+        {activeSection === "knowledge" && (
+        <section style={s.section}>
           <SectionCard
             step="06"
             icon="book"
@@ -762,7 +765,7 @@ export default function Dashboard() {
             <div style={s.knowledgeCount}>{knowledgeCount} / 15 entries used</div>
 
             {knowledgeCount > 0 && (
-              <div style={{ marginBottom: 16 }}>
+              <div style={s.knowledgeListScroll} className="forge-scroll-list">
                 {business.knowledgeBase.map((entry) => (
                   <div key={entry._id} className="forge-card" style={s.knowledgeCard}>
                     <div style={s.knowledgeCardHead}>
@@ -851,8 +854,10 @@ export default function Dashboard() {
             </div>
           </SectionCard>
         </section>
+        )}
 
-        <section id="crm" style={s.section}>
+        {activeSection === "crm" && (
+        <section style={s.section}>
           <SectionCard
             step="07"
             icon="link"
@@ -891,8 +896,10 @@ export default function Dashboard() {
             )}
           </SectionCard>
         </section>
+        )}
 
-        <section id="embed" style={s.section}>
+        {activeSection === "embed" && (
+        <section style={s.section}>
           <SectionCard
             step="08"
             icon="code"
@@ -909,6 +916,7 @@ export default function Dashboard() {
             <button className="forge-ghost" style={s.ghostBtn} onClick={copyEmbed}>{copied ? "Copied ✓" : "Copy code"}</button>
           </SectionCard>
         </section>
+        )}
         </main>
 
         <aside style={s.previewCol} className="forge-preview-col">
@@ -916,18 +924,6 @@ export default function Dashboard() {
         </aside>
         </div>
       </div>
-
-      {showBackToTop && (
-        <button
-          className="forge-back-to-top forge-fade-up"
-          style={s.backToTop}
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          aria-label="Back to top"
-          title="Back to top"
-        >
-          <ArrowUpIcon />
-        </button>
-      )}
     </div>
   );
 }
@@ -968,6 +964,15 @@ function Field({ label, children }) {
   );
 }
 
+function FieldGroup({ label, first, children }) {
+  return (
+    <div style={first ? s.fieldGroupFirst : s.fieldGroup}>
+      {label && <div style={s.fieldGroupLabel}>{label}</div>}
+      {children}
+    </div>
+  );
+}
+
 function StatChip({ icon, label, value, muted }) {
   return (
     <div style={s.statChip}>
@@ -994,14 +999,6 @@ function ChevronIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
       <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function ArrowUpIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -1100,9 +1097,9 @@ const s = {
   pageSubtitle: { fontSize: 13, color: color.inkSoft, margin: "0 0 20px" },
   toast: { background: color.successSoft, color: color.successText, padding: "8px 14px", borderRadius: radius.sm, fontSize: 12.5, fontWeight: 600, alignSelf: "center" },
 
-  pageBody: { display: "flex", gap: 32, alignItems: "stretch", width: "100%", maxWidth: 1200, margin: "0 auto", padding: "28px 40px 100px", boxSizing: "border-box" },
-  mainCol: { flex: 1, minWidth: 0 },
-  previewCol: { width: 300, flex: "0 0 300px" },
+  pageBody: { flex: 1, overflow: "hidden", display: "flex", gap: 32, alignItems: "stretch", width: "100%", maxWidth: 1200, margin: "0 auto", boxSizing: "border-box" },
+  mainCol: { flex: 1, minWidth: 0, height: "100%", overflowY: "auto", padding: "28px 40px 32px", boxSizing: "border-box" },
+  previewCol: { width: 300, flex: "0 0 300px", height: "100%", overflowY: "auto", overflowX: "hidden", padding: "28px 24px 20px 0", boxSizing: "border-box" },
 
   forgeMeter: { background: color.surface, border: `1px solid ${color.border}`, borderRadius: radius.md, padding: "14px 16px", marginBottom: 24, boxShadow: shadow.sm },
   forgeMeterTop: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 9 },
@@ -1131,12 +1128,16 @@ const s = {
   cardTitle: { fontSize: 17.5, fontWeight: 700, margin: "0 0 4px", letterSpacing: "-0.01em", fontFamily: "'Space Grotesk', sans-serif" },
   cardDesc: { fontSize: 13, color: color.inkSoft, margin: 0, lineHeight: 1.5 },
 
-  field: { marginBottom: 16 },
+  field: { marginBottom: 18 },
   label: { display: "block", fontSize: 12, color: color.inkSoft, fontWeight: 600, marginBottom: 6 },
+
+  fieldGroupFirst: { marginBottom: 4 },
+  fieldGroup: { marginTop: 20, paddingTop: 20, borderTop: `1px solid ${color.borderSoft}`, marginBottom: 4 },
+  fieldGroupLabel: { fontSize: 11, fontWeight: 700, color: color.inkFaint, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14, fontFamily: "'JetBrains Mono', monospace" },
   input: { width: "100%", boxSizing: "border-box", padding: "10px 12px", border: `1px solid ${color.border}`, borderRadius: 9, fontSize: 13.5, fontFamily: "inherit", background: "#FBFBFD", color: color.ink },
   inlineRow: { display: "flex", flexWrap: "wrap", gap: 10 },
 
-  chipList: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 8 },
+  chipList: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 8, maxHeight: 280, overflowY: "auto", paddingRight: 4 },
   chipRow: { display: "flex", gap: 8 },
   chipInput: { flex: 1, padding: "9px 11px", border: `1px solid ${color.border}`, borderRadius: 8, fontSize: 13.5, fontFamily: "inherit", background: "#FBFBFD" },
   chipRemove: { background: color.borderSoft, border: "none", borderRadius: 100, cursor: "pointer", padding: "0 12px", color: color.danger, fontSize: 13 },
@@ -1162,7 +1163,7 @@ const s = {
   hoursClosedLabel: { fontSize: 11.5, color: color.inkFaint, fontStyle: "italic" },
   upgradeLink: { fontSize: 12.5, color: color.accent, fontWeight: 600, textDecoration: "none" },
 
-  ctaList: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 8 },
+  ctaList: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 8, maxHeight: 280, overflowY: "auto", paddingRight: 4 },
   ctaRow: { display: "flex", gap: 8 },
 
   faqCard: { border: `1px solid ${color.borderSoft}`, borderRadius: 10, padding: 14, marginBottom: 10, background: "#FBFBFD" },
@@ -1172,11 +1173,12 @@ const s = {
   faqChevron: { flex: "0 0 auto", color: color.inkFaint, transition: "transform .15s ease" },
   faqEmptyState: { fontSize: 13, color: color.inkFaint, padding: "18px 0", textAlign: "center" },
 
-  backToTop: { position: "fixed", right: 28, bottom: 28, width: 42, height: 42, borderRadius: "50%", background: color.ink, color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 8px 22px -6px rgba(0,0,0,.4)", zIndex: 40 },
 
   errorBox: { background: color.dangerSoft, color: color.danger, padding: "9px 12px", borderRadius: 8, fontSize: 12.5, marginBottom: 14, fontWeight: 600 },
 
   knowledgeCount: { fontSize: 11.5, color: color.inkFaint, fontFamily: "'JetBrains Mono', monospace", marginBottom: 14 },
+  knowledgeListScroll: { marginBottom: 16, maxHeight: 480, overflowY: "auto", paddingRight: 4 },
+  scrollList: { maxHeight: 520, overflowY: "auto", paddingRight: 4, marginBottom: 4 },
   knowledgeCard: { border: `1px solid ${color.borderSoft}`, borderRadius: 10, padding: 14, marginBottom: 10, background: "#FBFBFD" },
   suggestionRow: { display: "flex", alignItems: "flex-start", gap: 10, padding: 10, background: "#fff", border: `1px solid ${color.borderSoft}`, borderRadius: 8, marginTop: 6 },
   suggestionQuestion: { fontSize: 12.5, fontWeight: 600, color: color.ink, marginBottom: 2 },

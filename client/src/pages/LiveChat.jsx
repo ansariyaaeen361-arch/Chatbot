@@ -178,7 +178,7 @@ export default function LiveChat() {
       <style>{hoverTimeCSS}</style>
       <Sidebar />
 
-      <div style={s.listPanel}>
+      <div style={s.listPanel} className="forge-livechat-list">
         <div style={{ padding: '12px 14px 0' }}>
           <BackToDashboard />
         </div>
@@ -214,7 +214,7 @@ export default function LiveChat() {
         </div>
       </div>
 
-      <div style={s.chatPanel}>
+      <div style={s.chatPanel} className="forge-livechat-chat">
         {!selectedChat && <div style={s.noChat}>Select a chat from the list to view the conversation</div>}
         {selectedChat && (
           <>

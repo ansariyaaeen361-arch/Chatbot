@@ -18,7 +18,7 @@ export default function Login() {
     setSubmitting(true);
     try {
       const data = await login(email, password);
-      navigate(data.user?.role === 'agent' ? '/livechat' : '/dashboard');
+      navigate(data.user?.role === 'agent' ? '/livechat' : '/home');
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed');
       setSubmitting(false);

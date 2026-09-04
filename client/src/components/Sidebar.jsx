@@ -3,13 +3,19 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/axios";
 import { color } from "../theme";
+import ConfirmDialog from "./ConfirmDialog";
 
 const API_ORIGIN = (api.defaults.baseURL || "").replace(/\/api\/?$/, "");
 
-const WORKSPACE_LINKS = [
-  { path: "/livechat", label: "Live chat inbox", icon: "chat" },
-  { path: "/team", label: "Team", icon: "users", roles: ["owner", "admin"] },
+const RAIL_LINKS = [
+  { path: "/home", label: "Home", icon: "home" },
+  { path: "/livechat", label: "Inbox", icon: "chat" },
   { path: "/analytics", label: "Analytics", icon: "chart", roles: ["owner", "admin"] },
+  { path: "/dashboard", label: "Setup", icon: "setup" },
+  { path: "/team", label: "Team", icon: "users", roles: ["owner", "admin"] },
+];
+
+const RAIL_BOTTOM_LINKS = [
   { path: "/billing", label: "Billing", icon: "card", roles: ["owner", "admin"] },
 ];
 
@@ -18,24 +24,137 @@ export default function Sidebar({ setupSections, activeSection, onSectionClick }
   const location = useLocation();
   const [business, setBusiness] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [logoError, setLogoError] = useState(false);
+  const [panelCollapsed, setPanelCollapsed] = useState(() => localStorage.getItem("mf_setup_panel_collapsed") === "1");
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  const togglePanelCollapsed = () => {
+    setPanelCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem("mf_setup_panel_collapsed", next ? "1" : "0");
+      return next;
+    });
+  };
 
   useEffect(() => {
     api.get("/business/me").then((res) => setBusiness(res.data)).catch(() => {});
   }, []);
 
   useEffect(() => {
+    setLogoError(false);
+  }, [business?.logoUrl]);
+
+  useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
 
   const initial = (business?.name || "?").charAt(0).toUpperCase();
+  const visibleLinks = RAIL_LINKS.filter((link) => !link.roles || link.roles.includes(user?.role));
+  const visibleBottomLinks = RAIL_BOTTOM_LINKS.filter((link) => !link.roles || link.roles.includes(user?.role));
 
   return (
-    <aside style={s.sidebar} className="forge-sidebar">
-      <div style={s.topRow}>
-        <Link to="/dashboard" style={s.brandRow}>
+    <aside className="forge-sidebar">
+      {/* Desktop icon rail */}
+      <nav className="forge-rail">
+        <Link to="/home" className="forge-rail-brand" style={{ background: business?.brandColor || color.accent }} title={business?.name || "Home"}>
+          {business?.logoUrl && !logoError
+            ? <img src={`${API_ORIGIN}${business.logoUrl}`} alt="" onError={() => setLogoError(true)} />
+            : initial}
+        </Link>
+
+        <div className="forge-rail-list">
+          {visibleLinks.map((link) => (
+            <Link
+              key={link.path}
+              to={link.path}
+              className={"forge-rail-item" + (location.pathname === link.path ? " forge-rail-active" : "")}
+            >
+              <NavIcon name={link.icon} />
+              <span className="forge-rail-tooltip">{link.label}</span>
+            </Link>
+          ))}
+        </div>
+
+        <div className="forge-rail-spacer" />
+
+        <div className="forge-rail-list">
+          {visibleBottomLinks.map((link) => (
+            <Link
+              key={link.path}
+              to={link.path}
+              className={"forge-rail-item" + (location.pathname === link.path ? " forge-rail-active" : "")}
+            >
+              <NavIcon name={link.icon} />
+              <span className="forge-rail-tooltip">{link.label}</span>
+            </Link>
+          ))}
+          <div className="forge-rail-divider" />
+          <Link to="/account" className={"forge-rail-item" + (location.pathname === "/account" ? " forge-rail-active" : "")}>
+            <NavIcon name="gear" />
+            <span className="forge-rail-tooltip">Account</span>
+          </Link>
+          <button className="forge-rail-item" onClick={() => setShowLogoutConfirm(true)}>
+            <NavIcon name="logout" />
+            <span className="forge-rail-tooltip">Sign out</span>
+          </button>
+        </div>
+      </nav>
+
+      {/* Desktop secondary panel — setup page section list only */}
+      {setupSections && panelCollapsed && (
+        <button
+          type="button"
+          className="forge-panel-expand"
+          onClick={togglePanelCollapsed}
+          title="Expand setup menu"
+          aria-label="Expand setup menu"
+        >
+          <ChevronDoubleIcon dir="right" />
+        </button>
+      )}
+      {setupSections && !panelCollapsed && (
+        <div className="forge-setup-panel">
+          <div style={s.panelHead}>
+            <div style={s.panelLabel}>Setup</div>
+            <button
+              type="button"
+              className="forge-panel-collapse-btn"
+              onClick={togglePanelCollapsed}
+              title="Collapse setup menu"
+              aria-label="Collapse setup menu"
+            >
+              <ChevronDoubleIcon dir="left" />
+            </button>
+          </div>
+          <nav style={s.setupNav}>
+            {setupSections.map((section) => {
+              const id = section[0];
+              const idx = section[1];
+              const label = section[2];
+              const isActive = activeSection === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  className={"forge-nav" + (isActive ? " forge-nav-active" : "")}
+                  style={isActive ? { ...s.navItem, ...s.navItemActive } : s.navItem}
+                  onClick={() => onSectionClick && onSectionClick(id)}
+                >
+                  <span style={isActive ? { ...s.navIndex, ...s.navIndexActive } : s.navIndex}>{idx}</span>
+                  {label}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+      )}
+
+      {/* Mobile top bar */}
+      <div className="forge-mobile-bar">
+        <Link to="/home" style={s.brandRow}>
           <div style={{ ...s.brandMark, background: business?.brandColor || color.accent }}>
-            {business?.logoUrl
-              ? <img src={`${API_ORIGIN}${business.logoUrl}`} alt={business.name} style={s.brandMarkImg} />
+            {business?.logoUrl && !logoError
+              ? <img src={`${API_ORIGIN}${business.logoUrl}`} alt="" style={s.brandMarkImg} onError={() => setLogoError(true)} />
               : initial}
           </div>
           <div>
@@ -43,7 +162,6 @@ export default function Sidebar({ setupSections, activeSection, onSectionClick }
             <div style={s.brandPlan}>{(business?.plan || "trial").toUpperCase()} PLAN</div>
           </div>
         </Link>
-
         <button
           className="forge-hamburger"
           style={s.hamburgerBtn}
@@ -54,10 +172,24 @@ export default function Sidebar({ setupSections, activeSection, onSectionClick }
         </button>
       </div>
 
-      <div className={"forge-panel" + (mobileOpen ? " forge-panel-open" : "")} style={s.panel}>
+      {/* Mobile dropdown panel */}
+      <div className={"forge-mobile-panel" + (mobileOpen ? " forge-mobile-panel-open" : "")}>
         <nav style={s.nav}>
+          {[...visibleLinks, ...visibleBottomLinks].map((link) => (
+            <Link
+              key={link.path}
+              to={link.path}
+              className={"forge-nav" + (location.pathname === link.path ? " forge-nav-active" : "")}
+              style={location.pathname === link.path ? { ...s.navItem, ...s.navItemActive } : s.navItem}
+            >
+              <NavIcon name={link.icon} />
+              {link.label}
+            </Link>
+          ))}
+
           {setupSections && (
             <>
+              <div style={s.navDivider} />
               <div style={s.navGroupLabel}>Setup</div>
               {setupSections.map((section) => {
                 const id = section[0];
@@ -65,40 +197,20 @@ export default function Sidebar({ setupSections, activeSection, onSectionClick }
                 const label = section[2];
                 const isActive = activeSection === id;
                 return (
-                  <a
+                  <button
                     key={id}
-                    href={"#" + id}
+                    type="button"
                     className={"forge-nav" + (isActive ? " forge-nav-active" : "")}
                     style={isActive ? { ...s.navItem, ...s.navItemActive } : s.navItem}
-                    onClick={() => {
-                      onSectionClick && onSectionClick(id);
-                      setMobileOpen(false);
-                    }}
+                    onClick={() => { onSectionClick && onSectionClick(id); setMobileOpen(false); }}
                   >
                     <span style={isActive ? { ...s.navIndex, ...s.navIndexActive } : s.navIndex}>{idx}</span>
                     {label}
-                  </a>
+                  </button>
                 );
               })}
-              <div style={s.navDivider} />
             </>
           )}
-
-          <div style={s.navGroupLabel}>Workspace</div>
-          {WORKSPACE_LINKS.filter((link) => !link.roles || link.roles.includes(user?.role)).map((link) => {
-            const isActive = location.pathname === link.path;
-            return (
-              <Link
-                key={link.path}
-                to={link.path}
-                className={"forge-nav" + (isActive ? " forge-nav-active" : "")}
-                style={isActive ? { ...s.navItem, ...s.navItemActive } : s.navItem}
-              >
-                <NavIcon name={link.icon} />
-                {link.label}
-              </Link>
-            );
-          })}
         </nav>
 
         <div style={s.sidebarFooter}>
@@ -109,16 +221,32 @@ export default function Sidebar({ setupSections, activeSection, onSectionClick }
               <div style={s.userRole}>{user?.role}</div>
             </div>
             <Link to="/account" style={s.settingsIcon} className="forge-ghost" title="Account settings">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" strokeWidth="1.8"/>
-                <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" strokeWidth="1.8"/>
-              </svg>
+              <NavIcon name="gear" size={16} />
             </Link>
           </div>
-          <button className="forge-ghost" style={s.signOutBtn} onClick={logout}>Sign out</button>
+          <button className="forge-ghost" style={s.signOutBtn} onClick={() => setShowLogoutConfirm(true)}>Sign out</button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={showLogoutConfirm}
+        title="Sign out?"
+        message="You'll need to sign in again to access your dashboard."
+        confirmLabel="Sign out"
+        danger
+        onConfirm={logout}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
     </aside>
+  );
+}
+
+function ChevronDoubleIcon({ dir = "left" }) {
+  const d = dir === "left" ? "M11 17l-5-5 5-5M18 17l-5-5 5-5" : "M13 17l5-5-5-5M6 17l5-5-5-5";
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+      <path d={d} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 
@@ -138,7 +266,7 @@ function CloseIcon() {
   );
 }
 
-function NavIcon({ name, size = 15 }) {
+function NavIcon({ name, size = 18 }) {
   const common = { stroke: "currentColor", strokeWidth: 1.8, fill: "none", strokeLinecap: "round", strokeLinejoin: "round" };
   const icons = {
     home: (
@@ -167,6 +295,27 @@ function NavIcon({ name, size = 15 }) {
         <path d="M1.5 10h21" />
       </g>
     ),
+    setup: (
+      <g {...common}>
+        <path d="M4 6h16M4 12h16M4 18h16" />
+        <circle cx="9" cy="6" r="1.7" fill="currentColor" stroke="none" />
+        <circle cx="15" cy="12" r="1.7" fill="currentColor" stroke="none" />
+        <circle cx="7" cy="18" r="1.7" fill="currentColor" stroke="none" />
+      </g>
+    ),
+    gear: (
+      <g {...common}>
+        <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" />
+        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" />
+      </g>
+    ),
+    logout: (
+      <g {...common}>
+        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+        <path d="M16 17l5-5-5-5" />
+        <path d="M21 12H9" />
+      </g>
+    ),
   };
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" style={{ flex: "0 0 auto" }}>
@@ -176,18 +325,18 @@ function NavIcon({ name, size = 15 }) {
 }
 
 const s = {
-  sidebar: { width: 250, flex: "0 0 auto", background: color.sidebar, color: "#E7E7F0", display: "flex", flexDirection: "column", padding: "24px 18px", boxSizing: "border-box", position: "sticky", top: 0, alignSelf: "flex-start", height: "100vh", overflowY: "auto" },
-  topRow: { display: "flex", alignItems: "center", justifyContent: "space-between" },
   hamburgerBtn: { display: "none", background: "rgba(255,255,255,.08)", border: "none", color: "#fff", width: 34, height: 34, borderRadius: 8, alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "0 0 auto" },
-  panel: { display: "flex", flexDirection: "column", flex: 1 },
-  brandRow: { display: "flex", alignItems: "center", gap: 10, marginBottom: 28, textDecoration: "none" },
-  brandMark: { width: 40, height: 40, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif", color: "#fff", fontSize: 15, flex: "0 0 auto", overflow: "hidden", boxShadow: "inset 0 0 0 2px rgba(255,255,255,.18), 0 2px 6px rgba(0,0,0,.35)" },
+  brandRow: { display: "flex", alignItems: "center", gap: 10, textDecoration: "none" },
+  brandMark: { width: 34, height: 34, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif", color: "#fff", fontSize: 14, flex: "0 0 auto", overflow: "hidden", boxShadow: "inset 0 0 0 2px rgba(255,255,255,.18)" },
   brandMarkImg: { width: "100%", height: "100%", objectFit: "cover" },
-  brandName: { fontWeight: 600, fontSize: 14, letterSpacing: "-0.01em", fontFamily: "'Space Grotesk', sans-serif", color: "#fff" },
-  brandPlan: { fontSize: 10, letterSpacing: "0.08em", color: color.accentLight, marginTop: 3, fontFamily: "'JetBrains Mono', monospace" },
-  nav: { display: "flex", flexDirection: "column", gap: 2, flex: 1 },
+  brandName: { fontWeight: 600, fontSize: 13.5, letterSpacing: "-0.01em", fontFamily: "'Space Grotesk', sans-serif", color: "#fff" },
+  brandPlan: { fontSize: 9.5, letterSpacing: "0.08em", color: color.accentLight, marginTop: 2, fontFamily: "'JetBrains Mono', monospace" },
+  panelHead: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
+  panelLabel: { fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: "#787C93", fontWeight: 600, fontFamily: "'JetBrains Mono', monospace" },
+  setupNav: { display: "flex", flexDirection: "column", gap: 2 },
+  nav: { display: "flex", flexDirection: "column", gap: 2, flex: 1, paddingTop: 8 },
   navGroupLabel: { fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: "#787C93", fontWeight: 600, margin: "14px 10px 4px", fontFamily: "'JetBrains Mono', monospace" },
-  navItem: { color: "#C6C7D6", textDecoration: "none", fontSize: 13.5, padding: "9px 11px", borderRadius: 9, display: "flex", alignItems: "center", gap: 9 },
+  navItem: { color: "#C6C7D6", textDecoration: "none", fontSize: 13.5, padding: "9px 11px", borderRadius: 9, display: "flex", alignItems: "center", gap: 9, background: "none", border: "none", width: "100%", textAlign: "left", cursor: "pointer", font: "inherit" },
   navItemActive: { background: "rgba(166,166,238,.14)", color: "#fff", fontWeight: 600 },
   navIndex: { fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, color: color.accentLight, opacity: 0.85 },
   navIndexActive: { opacity: 1 },

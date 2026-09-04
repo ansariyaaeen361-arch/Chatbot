@@ -85,7 +85,7 @@ export default function WidgetPreview({ business, apiOrigin }) {
             </div>
           </div>
 
-          <div style={s.widgetBody} ref={bodyRef}>
+          <div style={s.widgetBody} className="forge-thin-scroll" ref={bodyRef}>
             <div style={s.bubble}>
               {business.welcomeMessage || "Hi! How can I help you today?"}
             </div>
@@ -159,7 +159,7 @@ function LauncherGlyph() {
 }
 
 const s = {
-  wrap: { position: "sticky", top: 88 },
+  wrap: {},
   head: { display: "flex", alignItems: "center", gap: 7, marginBottom: 12, paddingLeft: 2 },
   liveDot: { width: 7, height: 7, borderRadius: "50%", background: color.success },
   headLabel: { fontSize: 12.5, fontWeight: 700, color: color.ink },

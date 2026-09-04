@@ -7,6 +7,9 @@ const requireRole = require('../middleware/requireRole');
 const requirePlanFeature = require('../middleware/requirePlanFeature');
 const {
   getOverview,
+  getHomeSummary,
+  getHomeTrend,
+  getMessageTrend,
   getTopQuestions,
   getMissedFaqs,
   getAgentStats,
@@ -15,6 +18,9 @@ const {
   exportLeadsCsv
 } = require('../controllers/analyticsController');
 
+router.get('/home', auth, requireVerified, requireSeatCompliance, requireRole('owner', 'admin'), getHomeSummary);
+router.get('/home-trend', auth, requireVerified, requireSeatCompliance, requireRole('owner', 'admin'), getHomeTrend);
+router.get('/message-trend', auth, requireVerified, requireSeatCompliance, requireRole('owner', 'admin'), requirePlanFeature('analytics'), getMessageTrend);
 router.get('/overview', auth, requireVerified, requireSeatCompliance, requireRole('owner', 'admin'), requirePlanFeature('analytics'), getOverview);
 router.get('/top-questions', auth, requireVerified, requireSeatCompliance, requireRole('owner', 'admin'), requirePlanFeature('analytics'), getTopQuestions);
 router.get('/missed-faqs', auth, requireVerified, requireSeatCompliance, requireRole('owner', 'admin'), requirePlanFeature('analytics'), getMissedFaqs);

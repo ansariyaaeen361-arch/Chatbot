@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
+import Home from './pages/Home';
 import LiveChat from './pages/LiveChat';
 import ProtectedRoute from './components/ProtectedRoute';
 import Team from './pages/Team';
@@ -21,6 +22,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/home" element={<ProtectedRoute roles={['owner', 'admin']}><Home /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute roles={['owner', 'admin']}><Dashboard /></ProtectedRoute>} />
           <Route path="/livechat" element={<ProtectedRoute><LiveChat /></ProtectedRoute>} />
           <Route path="*" element={<Login />} />
