@@ -8,6 +8,10 @@ const cors = require('cors');
 const connectDB = require('./config/db');
 
 const app = express();
+// We sit behind LiteSpeed's reverse proxy, which sets X-Forwarded-For. Trusting
+// exactly one hop (the proxy) lets express-rate-limit read the real client IP
+// instead of throwing on every request (ERR_ERL_UNEXPECTED_X_FORWARDED_FOR).
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
