@@ -58,10 +58,45 @@ export default function Dashboard() {
   const [faqSearch, setFaqSearch] = useState("");
   const [openFaqs, setOpenFaqs] = useState(() => new Set());
   const [crmTestResult, setCrmTestResult] = useState(null);
+  const [importingFaqs, setImportingFaqs] = useState(false);
+  const [importingServices, setImportingServices] = useState(false);
+
+  const draftKey = businessId ? `mf_draft_${businessId}` : null;
+  const DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+  const clearDraft = () => {
+    if (draftKey) { try { localStorage.removeItem(draftKey); } catch (e) {} }
+  };
 
   useEffect(() => {
-    api.get("/business/me").then((res) => setBusiness(res.data));
+    api.get("/business/me").then((res) => {
+      let data = res.data;
+      if (draftKey) {
+        try {
+          const raw = localStorage.getItem(draftKey);
+          if (raw) {
+            const draft = JSON.parse(raw);
+            if (draft && draft.savedAt && Date.now() - draft.savedAt < DRAFT_TTL_MS && draft.business) {
+              data = { ...data, ...draft.business };
+              flashMsg("Restored the changes you hadn't saved yet — hit Save to keep them.");
+            }
+          }
+        } catch (e) {}
+      }
+      setBusiness(data);
+    });
   }, []);
+
+  // Keep an unsaved-changes draft in localStorage so a reload (or an accidental
+  // tab close) before hitting Save doesn't wipe out what someone just typed.
+  // This never touches the live widget — only an explicit Save does that.
+  useEffect(() => {
+    if (!business || !draftKey) return;
+    const timer = setTimeout(() => {
+      try { localStorage.setItem(draftKey, JSON.stringify({ savedAt: Date.now(), business })); } catch (e) {}
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [business, draftKey]);
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
@@ -117,6 +152,7 @@ export default function Dashboard() {
       };
       const res = await api.put("/business/me", payload);
       setBusiness(res.data);
+      clearDraft();
       flashMsg("Profile saved.");
     } catch (err) {
       flashMsg("Failed to save changes.");
@@ -157,6 +193,46 @@ export default function Dashboard() {
     setBusiness((prev) => ({ ...prev, launcherType: res.data.launcherType, launcherMediaUrl: res.data.launcherMediaUrl }));
   };
 
+  const importServicesFromCsv = (e) => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const rows = parseCsvRows(String(reader.result));
+      const names = rows.map((r) => (r[0] || "").trim()).filter(Boolean);
+      if (names.length) {
+        updateField("services", [...business.services.filter((s) => s && s.trim()), ...names]);
+        flashMsg(`Added ${names.length} service${names.length === 1 ? "" : "s"} from the file. Remember to save.`);
+      } else {
+        flashMsg("Couldn't find any services in that file.");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const importServicesFromDocument = async (e) => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    setImportingServices(true);
+    try {
+      const text = await file.text();
+      const res = await api.post("/business/services/extract", { text });
+      const names = res.data.services || [];
+      if (names.length) {
+        updateField("services", [...business.services.filter((s) => s && s.trim()), ...names]);
+        flashMsg(`Added ${names.length} service${names.length === 1 ? "" : "s"} from the document. Remember to save.`);
+      } else {
+        flashMsg("Couldn't find any services in that document.");
+      }
+    } catch (err) {
+      flashMsg(err.response?.data?.error || "Could not read that document.");
+    } finally {
+      setImportingServices(false);
+    }
+  };
+
   const addService = () => updateField("services", [...business.services, ""]);
   const updateService = (i, val) => {
     const copy = [...business.services];
@@ -186,6 +262,7 @@ export default function Dashboard() {
     try {
       const res = await api.put("/business/me", { businessHours: business.businessHours, awayMessage: business.awayMessage });
       setBusiness((prev) => ({ ...prev, businessHours: res.data.businessHours, awayMessage: res.data.awayMessage }));
+      clearDraft();
       flashMsg("Business hours saved.");
     } finally {
       setSaving(false);
@@ -197,6 +274,7 @@ export default function Dashboard() {
     const res = await api.put("/business/faqs", { faqs: business.faqs });
     setBusiness((prev) => ({ ...prev, faqs: res.data.faqs }));
     setSaving(false);
+    clearDraft();
     flashMsg("FAQs saved.");
   };
   const addFaq = () => {
@@ -226,6 +304,49 @@ export default function Dashboard() {
       });
       return next;
     });
+  };
+
+  const importFaqsFromCsv = (e) => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const rows = parseCsvRows(String(reader.result));
+      const pairs = rows
+        .map((r) => ({ question: (r[0] || "").trim(), answer: (r[1] || "").trim() }))
+        .filter((f) => f.question && f.answer)
+        .filter((f) => f.question.toLowerCase() !== "question");
+      if (pairs.length) {
+        updateField("faqs", [...business.faqs, ...pairs]);
+        flashMsg(`Added ${pairs.length} FAQ${pairs.length === 1 ? "" : "s"} from the file. Remember to save.`);
+      } else {
+        flashMsg("Couldn't find any question,answer rows in that file.");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const importFaqsFromDocument = async (e) => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    setImportingFaqs(true);
+    try {
+      const text = await file.text();
+      const res = await api.post("/business/faqs/extract", { text });
+      const pairs = res.data.faqs || [];
+      if (pairs.length) {
+        updateField("faqs", [...business.faqs, ...pairs]);
+        flashMsg(`Added ${pairs.length} FAQ${pairs.length === 1 ? "" : "s"} from the document. Remember to save.`);
+      } else {
+        flashMsg("Couldn't find any Q&A in that document.");
+      }
+    } catch (err) {
+      flashMsg(err.response?.data?.error || "Could not read that document.");
+    } finally {
+      setImportingFaqs(false);
+    }
   };
 
   const addManualKnowledge = async () => {
@@ -464,8 +585,25 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-              <button className="forge-ghost" style={s.ghostBtn} onClick={addService}>+ Add service</button>
+              <div style={s.importRow}>
+                <button className="forge-ghost" style={s.ghostBtn} onClick={addService}>+ Add service</button>
+                <label className="forge-ghost" style={s.uploadBtn}>
+                  Upload CSV
+                  <input type="file" accept=".csv,text/csv" onChange={importServicesFromCsv} style={{ display: "none" }} />
+                </label>
+                <label className="forge-ghost" style={s.uploadBtn}>
+                  {importingServices ? "Reading…" : "Upload document"}
+                  <input type="file" accept=".txt,text/plain" onChange={importServicesFromDocument} style={{ display: "none" }} disabled={importingServices} />
+                </label>
+              </div>
+              <p style={s.importHint}>CSV: one service per line. Document: a .txt file — we'll read out the services mentioned in it.</p>
             </FieldGroup>
+
+            <div style={s.cardFooterEnd}>
+              <button className="forge-btn-primary" style={s.primaryBtn} onClick={saveProfile} disabled={saving}>
+                {saving ? "Saving…" : "Save profile"}
+              </button>
+            </div>
           </SectionCard>
         </section>
         )}
@@ -743,8 +881,20 @@ export default function Dashboard() {
             })()}
             </div>
 
-            <div style={s.cardFooterRow}>
+            <div style={s.importRow}>
               <button className="forge-ghost" style={s.ghostBtn} onClick={addFaq}>+ Add FAQ</button>
+              <label className="forge-ghost" style={s.uploadBtn}>
+                Upload CSV
+                <input type="file" accept=".csv,text/csv" onChange={importFaqsFromCsv} style={{ display: "none" }} />
+              </label>
+              <label className="forge-ghost" style={s.uploadBtn}>
+                {importingFaqs ? "Reading…" : "Upload document"}
+                <input type="file" accept=".txt,text/plain" onChange={importFaqsFromDocument} style={{ display: "none" }} disabled={importingFaqs} />
+              </label>
+            </div>
+            <p style={s.importHint}>CSV: "question,answer" per row. Document: a .txt file — we'll pull out Q&A pairs for you to review below.</p>
+
+            <div style={s.cardFooterEnd}>
               <button className="forge-btn-primary" style={s.primaryBtn} onClick={saveFaqs}>Save FAQs</button>
             </div>
           </SectionCard>
@@ -1067,6 +1217,34 @@ function NavIcon({ name, size = 15 }) {
   );
 }
 
+// Minimal CSV parser: handles quoted fields with embedded commas, skips blank lines.
+function parseCsvRows(text) {
+  const rows = [];
+  for (const line of text.split(/\r\n|\n|\r/)) {
+    if (!line.trim()) continue;
+    const cells = [];
+    let cur = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (inQuotes) {
+        if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+        else if (ch === '"') { inQuotes = false; }
+        else { cur += ch; }
+      } else if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ",") {
+        cells.push(cur); cur = "";
+      } else {
+        cur += ch;
+      }
+    }
+    cells.push(cur);
+    rows.push(cells);
+  }
+  return rows;
+}
+
 function computeCompleteness(business) {
   const checks = [
     !!business.name,
@@ -1197,6 +1375,8 @@ const s = {
 
   primaryBtn: { background: color.accent, color: "#fff", border: "none", padding: "10px 18px", borderRadius: 100, fontWeight: 600, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" },
   ghostBtn: { background: color.borderSoft, border: "none", padding: "8px 16px", borderRadius: 100, cursor: "pointer", fontSize: 12.5, fontWeight: 600, color: color.ink },
+  importRow: { display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 },
+  importHint: { fontSize: 11, color: color.inkFaint, margin: "6px 0 0", lineHeight: 1.5 },
   stickyBar: { display: "flex", justifyContent: "flex-end", marginBottom: 30 },
   cardFooterRow: { display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16, paddingTop: 16, borderTop: `1px solid ${color.borderSoft}` },
   cardFooterEnd: { display: "flex", justifyContent: "flex-end", marginTop: 16, paddingTop: 16, borderTop: `1px solid ${color.borderSoft}` },

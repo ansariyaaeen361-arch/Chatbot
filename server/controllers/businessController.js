@@ -354,6 +354,137 @@ Write plainly, like a real person, not like an AI. No em dashes (—). Keep each
   }
 };
 
+// Uses AI to pull FAQ-style question/answer pairs out of an uploaded document's
+// raw text (a plan doc, a policy page, support notes, etc). Returned as
+// suggestions only — nothing is saved until the owner reviews and adds them.
+exports.extractFaqsFromText = async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text || !text.trim()) return res.status(400).json({ error: 'No text provided' });
+
+    const business = await Business.findById(req.user.businessId).select('monthlySpendUsed monthlySpendCap');
+    if (!business) return res.status(404).json({ error: 'Business not found' });
+    if (business.monthlySpendUsed >= business.monthlySpendCap) {
+      return res.status(403).json({ error: 'This month’s AI budget has been used up. Try again next month or upgrade your plan.' });
+    }
+
+    const prompt = `Here is the text of a document a business owner uploaded:
+
+${text.slice(0, 8000)}
+
+Pull out every question-and-answer pair you can find or reasonably infer from this document that a customer might ask. Respond with ONLY a JSON array (no markdown, no explanation) in this exact shape:
+[{"question": "...", "answer": "..."}]
+
+Write plainly, like a real person, not like an AI. No em dashes (—). Keep each answer short and based only on facts actually present in the document above. Return at most 40 pairs.`;
+
+    const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 4000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!aiRes.ok) {
+      const detail = await aiRes.text();
+      console.log('Anthropic error:', detail);
+      return res.status(502).json({ error: 'AI extraction failed' });
+    }
+
+    const data = await aiRes.json();
+    const rawText = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+
+    const usage = data.usage || {};
+    const cost = ((usage.input_tokens || 0) / 1e6) * 1 + ((usage.output_tokens || 0) / 1e6) * 5;
+    await Business.updateOne({ _id: req.user.businessId }, { $inc: { monthlySpendUsed: cost } });
+
+    let faqs;
+    try {
+      const cleaned = rawText.replace(/```json|```/g, '').trim();
+      faqs = JSON.parse(cleaned);
+    } catch (e) {
+      return res.status(502).json({ error: 'Could not parse AI response' });
+    }
+
+    if (!Array.isArray(faqs)) faqs = [];
+    res.json({ faqs: faqs.filter(f => f && f.question && f.answer) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
+  }
+};
+
+// Same idea as extractFaqsFromText but for a plain list of services/offerings
+// mentioned in a document (a services page, a pricing sheet, etc).
+exports.extractServicesFromText = async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text || !text.trim()) return res.status(400).json({ error: 'No text provided' });
+
+    const business = await Business.findById(req.user.businessId).select('monthlySpendUsed monthlySpendCap');
+    if (!business) return res.status(404).json({ error: 'Business not found' });
+    if (business.monthlySpendUsed >= business.monthlySpendCap) {
+      return res.status(403).json({ error: 'This month’s AI budget has been used up. Try again next month or upgrade your plan.' });
+    }
+
+    const prompt = `Here is the text of a document a business owner uploaded:
+
+${text.slice(0, 8000)}
+
+List every distinct service, product, or offering this business provides, based only on this document. Respond with ONLY a JSON array of short strings (no markdown, no explanation), e.g.:
+["Website design", "SEO audits"]
+
+Return at most 25 items, each a few words long.`;
+
+    const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1200,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!aiRes.ok) {
+      const detail = await aiRes.text();
+      console.log('Anthropic error:', detail);
+      return res.status(502).json({ error: 'AI extraction failed' });
+    }
+
+    const data = await aiRes.json();
+    const rawText = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+
+    const usage = data.usage || {};
+    const cost = ((usage.input_tokens || 0) / 1e6) * 1 + ((usage.output_tokens || 0) / 1e6) * 5;
+    await Business.updateOne({ _id: req.user.businessId }, { $inc: { monthlySpendUsed: cost } });
+
+    let services;
+    try {
+      const cleaned = rawText.replace(/```json|```/g, '').trim();
+      services = JSON.parse(cleaned);
+    } catch (e) {
+      return res.status(502).json({ error: 'Could not parse AI response' });
+    }
+
+    if (!Array.isArray(services)) services = [];
+    res.json({ services: services.filter(s => typeof s === 'string' && s.trim()).map(s => s.trim()) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
+  }
+};
+
 exports.uploadLauncherMedia = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
