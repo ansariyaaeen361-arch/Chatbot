@@ -209,7 +209,13 @@ export default function Analytics() {
         </div>
 
         {/* ---- Most asked questions / Leads / Missed FAQ / Team performance — fills remaining space, each cell scrolls internally ---- */}
-        <div style={{ ...s.dataGrid, gridTemplateRows: (missedFaqs.length > 0 || agentStats.length > 0) ? "1fr 1fr" : "1fr" }} className="forge-data-grid">
+        <div
+          style={{
+            ...s.dataGrid,
+            gridTemplateRows: (missedFaqs.length > 0 || agentStats.length > 0) ? "230px 360px" : "230px",
+          }}
+          className="forge-data-grid"
+        >
           <div className="forge-card" style={s.gridCard}>
             <h2 style={s.cardTitle}>Most asked questions</h2>
             {topQuestions.length === 0 && <p style={s.cardDesc}>No questions yet.</p>}
@@ -374,9 +380,9 @@ const s = {
   statLabel: { fontSize: 11.5, color: color.inkSoft, marginTop: 2 },
   statSub: { fontSize: 10, color: color.accentDeep, marginTop: 3, fontWeight: 600 },
 
-  mainFlex: { flex: 1, height: "100%", overflow: "hidden", display: "flex", flexDirection: "column", padding: "18px 32px 14px", maxWidth: 1180, margin: "0 auto", width: "100%", boxSizing: "border-box" },
+  mainFlex: { flex: 1, height: "100%", overflowY: "auto", overflowX: "hidden", display: "flex", flexDirection: "column", padding: "18px 32px 14px", maxWidth: 1180, margin: "0 auto", width: "100%", boxSizing: "border-box" },
   fixedTop: { flex: "0 0 auto" },
-  dataGrid: { flex: "1 1 auto", minHeight: 190, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, paddingBottom: 2 },
+  dataGrid: { flex: "0 0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, paddingBottom: 2 },
   gridCard: { minHeight: 0, display: "flex", flexDirection: "column", background: color.surface, border: `1px solid ${color.border}`, borderRadius: 14, padding: 16 },
   gridCardList: { flex: "1 1 auto", minHeight: 0, overflowY: "auto", paddingRight: 4, display: "flex", flexDirection: "column", gap: 8 },
 
