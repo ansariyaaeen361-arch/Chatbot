@@ -78,7 +78,14 @@ exports.createChat = async (req, res) => {
 
     const io = req.app.get("io");
     io.to(`business_${businessId}`).emit("refresh");
-    if (chat.assignedTo) io.to(`chat_${chat._id}`).emit("chat_updated", chat);
+    if (chat.assignedTo) {
+      io.to(`chat_${chat._id}`).emit("chat_updated", chat);
+    } else {
+      io.to(`business_${businessId}`).emit("new_waiting_chat", {
+        chatId: chat._id,
+        visitorName: chat.visitorName,
+      });
+    }
     res.json({ chatId: chat._id });
   } catch (err) {
     console.error(err);

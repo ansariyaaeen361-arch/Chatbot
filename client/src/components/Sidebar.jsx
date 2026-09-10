@@ -22,7 +22,8 @@ const RAIL_BOTTOM_LINKS = [
 
 export default function Sidebar({ setupSections, activeSection, onSectionClick }) {
   const { user, logout } = useAuth();
-  const { unreadCount } = useLiveChatNotify();
+  const { unreadCount, waitingCount } = useLiveChatNotify();
+  const inboxBadgeCount = unreadCount + waitingCount;
   const location = useLocation();
   const [business, setBusiness] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -72,8 +73,8 @@ export default function Sidebar({ setupSections, activeSection, onSectionClick }
               className={"forge-rail-item" + (location.pathname === link.path ? " forge-rail-active" : "")}
             >
               <NavIcon name={link.icon} />
-              {link.path === "/livechat" && unreadCount > 0 && (
-                <span className="forge-rail-badge">{unreadCount > 9 ? "9+" : unreadCount}</span>
+              {link.path === "/livechat" && inboxBadgeCount > 0 && (
+                <span className="forge-rail-badge">{inboxBadgeCount > 9 ? "9+" : inboxBadgeCount}</span>
               )}
               <span className="forge-rail-tooltip">{link.label}</span>
             </Link>
@@ -189,8 +190,8 @@ export default function Sidebar({ setupSections, activeSection, onSectionClick }
             >
               <NavIcon name={link.icon} />
               {link.label}
-              {link.path === "/livechat" && unreadCount > 0 && (
-                <span className="forge-rail-badge" style={{ position: "static", marginLeft: "auto" }}>{unreadCount > 9 ? "9+" : unreadCount}</span>
+              {link.path === "/livechat" && inboxBadgeCount > 0 && (
+                <span className="forge-rail-badge" style={{ position: "static", marginLeft: "auto" }}>{inboxBadgeCount > 9 ? "9+" : inboxBadgeCount}</span>
               )}
             </Link>
           ))}

@@ -34,7 +34,6 @@ export default function LiveChat() {
   const [team, setTeam] = useState([]);
   const socketRef = useRef(null);
   const bodyRef = useRef(null);
-  const beepIntervalRef = useRef(null);
   const typingTimerRef = useRef(null);
 
   const isAdmin = user?.role === 'owner' || user?.role === 'admin';
@@ -53,35 +52,6 @@ export default function LiveChat() {
       setActiveChat(null);
     };
   }, []);
-
-  useEffect(() => {
-    if (waiting.length > 0) {
-      if (!beepIntervalRef.current) {
-        playBeep();
-        beepIntervalRef.current = setInterval(playBeep, 2000);
-      }
-    } else {
-      clearInterval(beepIntervalRef.current);
-      beepIntervalRef.current = null;
-    }
-  }, [waiting]);
-
-  function playBeep() {
-    try {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      const ctx = new Ctx();
-      [700, 900].forEach((freq, i) => {
-        const osc = ctx.createOscillator(), gain = ctx.createGain();
-        osc.type = 'sine'; osc.frequency.value = freq;
-        osc.connect(gain); gain.connect(ctx.destination);
-        const start = ctx.currentTime + i * 0.13;
-        gain.gain.setValueAtTime(0.001, start);
-        gain.gain.exponentialRampToValueAtTime(0.2, start + 0.01);
-        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.13);
-        osc.start(start); osc.stop(start + 0.15);
-      });
-    } catch (e) {}
-  }
 
   function loadAll() {
     api.get(`/livechat/business/${businessId}?status=waiting`).then(res => setWaiting(res.data));
