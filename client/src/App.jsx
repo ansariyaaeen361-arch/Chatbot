@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { LiveChatNotifyProvider } from './context/LiveChatNotifyContext';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
@@ -19,6 +20,7 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+      <LiveChatNotifyProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
@@ -36,6 +38,7 @@ function App() {
           <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
         </Routes>
+      </LiveChatNotifyProvider>
       </AuthProvider>
     </BrowserRouter>
   );

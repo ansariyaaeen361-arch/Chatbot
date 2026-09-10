@@ -169,6 +169,7 @@ ${fontImport}
 .forge-rail-tooltip { position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%) translateX(-4px); background: ${color.ink}; color: #fff; font-size: 11.5px; font-weight: 600; padding: 6px 10px; border-radius: 8px; white-space: nowrap; box-shadow: 0 10px 24px rgba(15,16,32,.28); opacity: 0; pointer-events: none; transition: opacity .15s ease, transform .15s ease; z-index: 40; }
 .forge-rail-tooltip:before { content: ''; position: absolute; right: 100%; top: 50%; transform: translateY(-50%); border: 5px solid transparent; border-right-color: ${color.ink}; }
 .forge-rail-item:hover .forge-rail-tooltip { opacity: 1; transform: translateY(-50%) translateX(0); }
+.forge-rail-badge { position: absolute; top: 2px; right: 2px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: ${color.danger}; color: #fff; font-size: 10px; font-weight: 700; line-height: 16px; text-align: center; box-shadow: 0 0 0 2px ${color.ink}; }
 .forge-rail-spacer { flex: 1; }
 .forge-rail-divider { width: 26px; height: 1px; background: ${color.sidebarLine}; margin: 6px 0; }
 .forge-rail-label { display: none; }

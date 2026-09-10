@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from '../context/AuthContext';
+import { useLiveChatNotify } from '../context/LiveChatNotifyContext';
 import api from '../api/axios';
 import Sidebar from '../components/Sidebar';
 import BackToDashboard from '../components/BackToDashboard';
@@ -37,39 +38,20 @@ export default function LiveChat() {
   const typingTimerRef = useRef(null);
 
   const isAdmin = user?.role === 'owner' || user?.role === 'admin';
-  const selectedChatRef = useRef(null);
-  useEffect(() => { selectedChatRef.current = selectedChat; }, [selectedChat]);
+  const { setActiveChat, clearUnread } = useLiveChatNotify();
 
   useEffect(() => {
     api.get('/business/team').then(res => setTeam(res.data));
     loadAll();
 
-    if (window.Notification && Notification.permission === 'default') {
-      Notification.requestPermission().catch(() => {});
-    }
-
     socketRef.current = io(API_ROOT);
     socketRef.current.emit('join_business', businessId);
     socketRef.current.on('refresh', loadAll);
-    socketRef.current.on('visitor_message', (payload) => {
-      const isViewingThisChat = selectedChatRef.current?._id === payload.chatId;
-      const isTabVisible = document.visibilityState === 'visible';
-      if (isViewingThisChat && isTabVisible) return;
 
-      playLoudAlert();
-      if (window.Notification && Notification.permission === 'granted') {
-        const notif = new Notification(`New message from ${payload.visitorName || 'a visitor'}`, {
-          body: payload.text,
-          tag: `mf-livechat-${payload.chatId}`,
-        });
-        notif.onclick = () => {
-          window.focus();
-          notif.close();
-        };
-      }
-    });
-
-    return () => socketRef.current.disconnect();
+    return () => {
+      socketRef.current.disconnect();
+      setActiveChat(null);
+    };
   }, []);
 
   useEffect(() => {
@@ -83,25 +65,6 @@ export default function LiveChat() {
       beepIntervalRef.current = null;
     }
   }, [waiting]);
-
-  // Louder, more attention-grabbing alert for an incoming visitor message on a
-  // chat the agent isn't currently looking at (different chat, or a different tab/app).
-  function playLoudAlert() {
-    try {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      const ctx = new Ctx();
-      [880, 660, 880].forEach((freq, i) => {
-        const osc = ctx.createOscillator(), gain = ctx.createGain();
-        osc.type = 'square'; osc.frequency.value = freq;
-        osc.connect(gain); gain.connect(ctx.destination);
-        const start = ctx.currentTime + i * 0.18;
-        gain.gain.setValueAtTime(0.0001, start);
-        gain.gain.exponentialRampToValueAtTime(0.5, start + 0.015);
-        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.18);
-        osc.start(start); osc.stop(start + 0.19);
-      });
-    } catch (e) {}
-  }
 
   function playBeep() {
     try {
@@ -128,18 +91,30 @@ export default function LiveChat() {
 
   function openChat(chat) {
     setSelectedChat(chat);
+    setActiveChat(chat._id);
+    clearUnread(chat._id);
     api.get(`/livechat/${chat._id}/messages`).then(res => setMessages(res.data));
 
     socketRef.current.emit('join_chat', chat._id);
     socketRef.current.off('new_message');
     socketRef.current.on('new_message', (m) => {
       setMessages(prev => [...prev, m]);
+      if (m.sender === 'visitor') clearUnread(chat._id);
     });
   }
 
   useEffect(() => {
     if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
   }, [messages]);
+
+  // If the agent comes back to this tab while a chat is already open, treat it as read.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && selectedChat) clearUnread(selectedChat._id);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [selectedChat]);
 
   // ─── Date/Time Helpers ──────────────────────────────────────────────────────
   function formatTime(ts) {

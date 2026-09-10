@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useLiveChatNotify } from "../context/LiveChatNotifyContext";
 import api from "../api/axios";
 import { color } from "../theme";
 import ConfirmDialog from "./ConfirmDialog";
@@ -21,6 +22,7 @@ const RAIL_BOTTOM_LINKS = [
 
 export default function Sidebar({ setupSections, activeSection, onSectionClick }) {
   const { user, logout } = useAuth();
+  const { unreadCount } = useLiveChatNotify();
   const location = useLocation();
   const [business, setBusiness] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -70,6 +72,9 @@ export default function Sidebar({ setupSections, activeSection, onSectionClick }
               className={"forge-rail-item" + (location.pathname === link.path ? " forge-rail-active" : "")}
             >
               <NavIcon name={link.icon} />
+              {link.path === "/livechat" && unreadCount > 0 && (
+                <span className="forge-rail-badge">{unreadCount > 9 ? "9+" : unreadCount}</span>
+              )}
               <span className="forge-rail-tooltip">{link.label}</span>
             </Link>
           ))}
@@ -184,6 +189,9 @@ export default function Sidebar({ setupSections, activeSection, onSectionClick }
             >
               <NavIcon name={link.icon} />
               {link.label}
+              {link.path === "/livechat" && unreadCount > 0 && (
+                <span className="forge-rail-badge" style={{ position: "static", marginLeft: "auto" }}>{unreadCount > 9 ? "9+" : unreadCount}</span>
+              )}
             </Link>
           ))}
 
