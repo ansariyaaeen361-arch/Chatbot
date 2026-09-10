@@ -36,7 +36,7 @@ router.put('/faqs', auth, requireVerified, requireSeatCompliance, requireRole('o
 router.post('/faqs/promote', auth, requireVerified, requireSeatCompliance, requireRole('owner', 'admin'), addFaqFromSuggestion);
 router.post('/faqs/extract', auth, requireVerified, requireSeatCompliance, requireRole('owner', 'admin'), extractFaqsFromText);
 router.post('/services/extract', auth, requireVerified, requireSeatCompliance, requireRole('owner', 'admin'), extractServicesFromText);
-router.post('/invite', auth, requireVerified, requireSeatCompliance, requireRole('owner', 'admin'), inviteTeamMember);
+router.post('/invite', auth, requireSeatCompliance, requireRole('owner', 'admin'), inviteTeamMember);
 router.delete('/team/:userId', auth, requireVerified, requireSeatCompliance, requireRole('owner', 'admin'), removeTeamMember);
 
 router.post('/knowledge', auth, requireVerified, requireSeatCompliance, requireRole('owner', 'admin'), addKnowledgeEntry);
