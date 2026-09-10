@@ -100,6 +100,7 @@ export function LiveChatNotifyProvider({ children }) {
         const notif = new Notification(`New message from ${payload.visitorName || "a visitor"}`, {
           body: payload.text,
           tag: `mf-livechat-${payload.chatId}`,
+          silent: true,
         });
         notif.onclick = () => {
           window.focus();
@@ -123,6 +124,7 @@ export function LiveChatNotifyProvider({ children }) {
         const notif = new Notification("Live chat request", {
           body: `${payload.visitorName || "A visitor"} wants to talk to a live agent.`,
           tag: `mf-waiting-${payload.chatId}`,
+          silent: true,
         });
         notif.onclick = () => {
           window.focus();
