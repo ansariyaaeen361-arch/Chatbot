@@ -26,7 +26,17 @@
   var state = loadState();
   if (!state.sessionId) { state.sessionId = genSessionId(); saveState(); }
 
-  var BOT_ICON_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2"/><rect x="4" y="8" width="16" height="12" rx="4"/><circle cx="9" cy="13" r="1.2" fill="currentColor"/><circle cx="15" cy="13" r="1.2" fill="currentColor"/><path d="M9 17h6"/><path d="M2 13h2"/><path d="M20 13h2"/></svg>';
+  function botIconSvg(px) {
+    return '<svg viewBox="0 0 24 24" width="' + px + '" height="' + px + '" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' +
+      '<circle cx="12" cy="5.2" r="1.3" fill="currentColor" stroke="none"/>' +
+      '<path d="M12 6.8v2"/>' +
+      '<rect x="5" y="9.4" width="14" height="11.2" rx="5"/>' +
+      '<circle cx="9.3" cy="14.7" r="1.25" fill="currentColor" stroke="none"/>' +
+      '<circle cx="14.7" cy="14.7" r="1.25" fill="currentColor" stroke="none"/>' +
+      '<path d="M9.5 17.4c.9.65 3.6.65 4.5 0"/>' +
+    '</svg>';
+  }
+  var BOT_ICON_SVG = botIconSvg(15);
   var USER_ICON_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
   var HUMAN_ICON_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>';
   var CLOSE_ICON_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
@@ -133,7 +143,8 @@
       '.mf2-panel.open{opacity:1;transform:translateY(0) scale(1);pointer-events:auto;}' +
       '.mf2-panel *{box-sizing:border-box;}' +
       '.mf2-head{background:linear-gradient(135deg,' + brand + ',' + brandDeep + ');color:#fff;padding:16px 18px;display:flex;align-items:center;gap:12px;flex:0 0 auto;position:relative;}' +
-      '.mf2-head img{width:34px;height:34px;border-radius:50%;object-fit:cover;background:#fff;flex:0 0 auto;box-shadow:0 0 0 2px rgba(255,255,255,.5);}' +
+      '.mf2-head-logo{width:34px;height:34px;border-radius:10px;background:#fff;flex:0 0 auto;display:flex;align-items:center;justify-content:center;padding:4px;box-sizing:border-box;box-shadow:0 1px 4px rgba(0,0,0,.18),0 0 0 1px rgba(255,255,255,.55);overflow:hidden;}' +
+      '.mf2-head-logo img{width:100%;height:100%;object-fit:contain;display:block;}' +
       '.mf2-head-text{min-width:0;}' +
       '.mf2-title{font-weight:700;font-size:15.5px;letter-spacing:-0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
       '.mf2-status{font-size:11.5px;opacity:.9;display:flex;align-items:center;gap:6px;margin-top:2px;}' +
@@ -287,7 +298,7 @@
     panel.className = 'mf2-panel';
     panel.innerHTML =
       '<div class="mf2-head">' +
-        (config.logoUrl ? '<img src="' + API_ROOT + config.logoUrl + '">' : '') +
+        (config.logoUrl ? '<div class="mf2-head-logo"><img src="' + API_ROOT + config.logoUrl + '" alt=""></div>' : '') +
         '<div class="mf2-head-text">' +
           '<div class="mf2-title">' + escapeHtml(config.name) + '</div>' +
           '<div class="mf2-status">' +
@@ -329,7 +340,7 @@
     teaser.className = 'mf2-teaser';
     var teaserAvatar = config.logoUrl
       ? '<img src="' + API_ROOT + config.logoUrl + '" alt="">'
-      : BOT_ICON_SVG.replace(/width="13" height="13"/, 'width="16" height="16"');
+      : botIconSvg(18);
     teaser.innerHTML =
       '<button class="mf2-teaser-close" id="mf2TeaserClose" aria-label="Dismiss">' + CLOSE_ICON_SVG.replace(/width="18" height="18"/, 'width="11" height="11"').replace(/stroke="#fff"/, 'stroke="currentColor"') + '</button>' +
       '<div class="mf2-teaser-row">' +
@@ -622,7 +633,7 @@
     gate.style.display = 'flex';
     gate.innerHTML =
       '<div class="mf2-gate-card">' +
-        '<div class="mf2-gate-icon">' + BOT_ICON_SVG.replace(/width="13" height="13"/, 'width="24" height="24"') + '</div>' +
+        '<div class="mf2-gate-icon">' + botIconSvg(30) + '</div>' +
         '<div class="mf2-gate-title">Hi! Who am I speaking with?</div>' +
         '<div class="mf2-gate-desc">Please share your details to start chatting with us.</div>' +
         '<input type="text" id="mf2Name" placeholder="Your name" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false">' +
