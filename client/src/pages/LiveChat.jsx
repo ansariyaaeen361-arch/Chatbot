@@ -37,14 +37,37 @@ export default function LiveChat() {
   const typingTimerRef = useRef(null);
 
   const isAdmin = user?.role === 'owner' || user?.role === 'admin';
+  const selectedChatRef = useRef(null);
+  useEffect(() => { selectedChatRef.current = selectedChat; }, [selectedChat]);
 
   useEffect(() => {
     api.get('/business/team').then(res => setTeam(res.data));
     loadAll();
 
+    if (window.Notification && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
+    }
+
     socketRef.current = io(API_ROOT);
     socketRef.current.emit('join_business', businessId);
     socketRef.current.on('refresh', loadAll);
+    socketRef.current.on('visitor_message', (payload) => {
+      const isViewingThisChat = selectedChatRef.current?._id === payload.chatId;
+      const isTabVisible = document.visibilityState === 'visible';
+      if (isViewingThisChat && isTabVisible) return;
+
+      playLoudAlert();
+      if (window.Notification && Notification.permission === 'granted') {
+        const notif = new Notification(`New message from ${payload.visitorName || 'a visitor'}`, {
+          body: payload.text,
+          tag: `mf-livechat-${payload.chatId}`,
+        });
+        notif.onclick = () => {
+          window.focus();
+          notif.close();
+        };
+      }
+    });
 
     return () => socketRef.current.disconnect();
   }, []);
@@ -60,6 +83,25 @@ export default function LiveChat() {
       beepIntervalRef.current = null;
     }
   }, [waiting]);
+
+  // Louder, more attention-grabbing alert for an incoming visitor message on a
+  // chat the agent isn't currently looking at (different chat, or a different tab/app).
+  function playLoudAlert() {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      const ctx = new Ctx();
+      [880, 660, 880].forEach((freq, i) => {
+        const osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.type = 'square'; osc.frequency.value = freq;
+        osc.connect(gain); gain.connect(ctx.destination);
+        const start = ctx.currentTime + i * 0.18;
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(0.5, start + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.18);
+        osc.start(start); osc.stop(start + 0.19);
+      });
+    } catch (e) {}
+  }
 
   function playBeep() {
     try {

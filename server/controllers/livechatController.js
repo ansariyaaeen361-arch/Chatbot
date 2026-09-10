@@ -123,7 +123,19 @@ exports.sendMessage = async (req, res) => {
       text,
       repName,
     });
-    req.app.get("io").to(`chat_${chatId}`).emit("new_message", message);
+    const io = req.app.get("io");
+    io.to(`chat_${chatId}`).emit("new_message", message);
+
+    if (sender === "visitor") {
+      const chat = await Chat.findById(chatId).select("businessId visitorName");
+      if (chat) {
+        io.to(`business_${chat.businessId}`).emit("visitor_message", {
+          chatId,
+          visitorName: chat.visitorName,
+          text,
+        });
+      }
+    }
 
     res.json({ success: true, message });
   } catch (err) {
