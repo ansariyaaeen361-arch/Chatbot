@@ -20,6 +20,7 @@ export default function Team() {
   const [msg, setMsg] = useState("");
   const [inviting, setInviting] = useState(false);
   const [teamSearch, setTeamSearch] = useState("");
+  const [resending, setResending] = useState(false);
 
   const isAdmin = user?.role === "owner" || user?.role === "admin";
 
@@ -62,6 +63,19 @@ export default function Team() {
       loadTeam();
     } catch (err) {
       setError(err.response?.data?.error || "Failed to remove team member");
+    }
+  }
+
+  async function handleResendVerification() {
+    setResending(true);
+    setError(""); setMsg("");
+    try {
+      await api.post("/auth/resend-verification");
+      setMsg("Verification email sent — please check your inbox (and spam folder).");
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to send verification email");
+    } finally {
+      setResending(false);
     }
   }
 
@@ -110,7 +124,22 @@ export default function Team() {
                 <p style={s.cardDesc}>Share these login details with them directly so they can sign in with this email and password.</p>
 
                 <form onSubmit={handleInvite}>
-                  {error && <div style={s.error}>{error}</div>}
+                  {error && (
+                    <div style={s.error}>
+                      {error}
+                      {error.toLowerCase().includes("verify your email") && (
+                        <button
+                          type="button"
+                          className="forge-ghost"
+                          style={s.resendBtn}
+                          onClick={handleResendVerification}
+                          disabled={resending}
+                        >
+                          {resending ? "Sending…" : "Resend verification email"}
+                        </button>
+                      )}
+                    </div>
+                  )}
                   {msg && <div style={s.success}>{msg}</div>}
 
                   <Field label="Full name">
@@ -230,7 +259,8 @@ const s = {
   toggleRow: { display: "flex", alignItems: "center", gap: 10, cursor: "pointer" },
   toggleLabel: { fontSize: 13, color: color.inkSoft },
 
-  error: { background: color.dangerSoft, color: color.danger, padding: "9px 12px", borderRadius: 8, fontSize: 12.5, marginBottom: 14 },
+  error: { background: color.dangerSoft, color: color.danger, padding: "9px 12px", borderRadius: 8, fontSize: 12.5, marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" },
+  resendBtn: { background: "#fff", border: `1px solid ${color.danger}55`, color: color.danger, padding: "5px 12px", borderRadius: 100, fontSize: 11.5, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flex: "0 0 auto" },
   success: { background: color.successSoft, color: color.successText, padding: "9px 12px", borderRadius: 8, fontSize: 12.5, marginBottom: 14 },
 
   teamListHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 4 },
