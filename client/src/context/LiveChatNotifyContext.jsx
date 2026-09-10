@@ -6,43 +6,52 @@ import api from "../api/axios";
 const API_ROOT = (api.defaults.baseURL || "").replace(/\/api\/?$/, "");
 const LiveChatNotifyContext = createContext();
 
+// A single, reused AudioContext for the whole app. Creating a brand new one on
+// every beep (the old approach) silently exhausts the browser's limited pool of
+// concurrent audio contexts after a couple dozen rings — the sound would just
+// stop firing for good, with the try/catch below hiding the failure. Reusing one
+// context (and resuming it, since it can start/settle into "suspended") avoids that.
+let sharedAudioCtx = null;
+function getAudioContext() {
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return null;
+  if (!sharedAudioCtx || sharedAudioCtx.state === "closed") {
+    sharedAudioCtx = new Ctx();
+  }
+  if (sharedAudioCtx.state === "suspended") {
+    sharedAudioCtx.resume().catch(() => {});
+  }
+  return sharedAudioCtx;
+}
+
+function playTones(freqs, { type, gap, dur, peak }) {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    freqs.forEach((freq, i) => {
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.type = type; osc.frequency.value = freq;
+      osc.connect(gain); gain.connect(ctx.destination);
+      const start = ctx.currentTime + i * gap;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(peak, start + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+      osc.start(start); osc.stop(start + dur + 0.01);
+    });
+  } catch (e) {}
+}
+
 // Louder, more attention-grabbing alert for an incoming visitor message the
 // agent isn't actively looking at right now (different chat, different page, or a
 // different browser tab/app entirely).
 function playLoudAlert() {
-  try {
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    const ctx = new Ctx();
-    [880, 660, 880].forEach((freq, i) => {
-      const osc = ctx.createOscillator(), gain = ctx.createGain();
-      osc.type = "square"; osc.frequency.value = freq;
-      osc.connect(gain); gain.connect(ctx.destination);
-      const start = ctx.currentTime + i * 0.18;
-      gain.gain.setValueAtTime(0.0001, start);
-      gain.gain.exponentialRampToValueAtTime(0.5, start + 0.015);
-      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.18);
-      osc.start(start); osc.stop(start + 0.19);
-    });
-  } catch (e) {}
+  playTones([880, 660, 880], { type: "square", gap: 0.18, dur: 0.18, peak: 0.5 });
 }
 
 // A ringing-phone style repeating tone for a visitor waiting for a live agent —
 // louder and kept ringing until the request is accepted (or the visitor leaves).
 function playWaitingRing() {
-  try {
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    const ctx = new Ctx();
-    [700, 900].forEach((freq, i) => {
-      const osc = ctx.createOscillator(), gain = ctx.createGain();
-      osc.type = "sine"; osc.frequency.value = freq;
-      osc.connect(gain); gain.connect(ctx.destination);
-      const start = ctx.currentTime + i * 0.15;
-      gain.gain.setValueAtTime(0.0001, start);
-      gain.gain.exponentialRampToValueAtTime(0.45, start + 0.015);
-      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.15);
-      osc.start(start); osc.stop(start + 0.16);
-    });
-  } catch (e) {}
+  playTones([700, 900], { type: "sine", gap: 0.15, dur: 0.15, peak: 0.45 });
 }
 
 // Mounted once for the whole logged-in app (not just the Inbox/LiveChat page) so an
@@ -68,6 +77,21 @@ export function LiveChatNotifyProvider({ children }) {
       }
     } catch (e) {}
   };
+
+  // Browsers can settle a freshly-created AudioContext into "suspended" until a
+  // user gesture unlocks it, and switching tabs/apps is a good moment to make
+  // sure it's still running so the ring doesn't go silent on a background tab.
+  useEffect(() => {
+    const unlock = () => getAudioContext();
+    document.addEventListener("click", unlock);
+    document.addEventListener("keydown", unlock);
+    document.addEventListener("visibilitychange", unlock);
+    return () => {
+      document.removeEventListener("click", unlock);
+      document.removeEventListener("keydown", unlock);
+      document.removeEventListener("visibilitychange", unlock);
+    };
+  }, []);
 
   useEffect(() => {
     if (!businessId || !user) return;
