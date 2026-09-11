@@ -425,7 +425,7 @@
       teaser.classList.add('show');
     }
 
-    teaserTimer = setTimeout(reveal, 11000);
+    teaserTimer = setTimeout(reveal, 20000);
 
     // Exit intent — mouse moving up toward the browser chrome (tab bar / back button)
     // usually means the visitor is about to leave the page.
