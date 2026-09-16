@@ -170,6 +170,17 @@ ${fontImport}
 .forge-rail-tooltip:before { content: ''; position: absolute; right: 100%; top: 50%; transform: translateY(-50%); border: 5px solid transparent; border-right-color: ${color.ink}; }
 .forge-rail-item:hover .forge-rail-tooltip { opacity: 1; transform: translateY(-50%) translateX(0); }
 .forge-rail-badge { position: absolute; top: 2px; right: 2px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: ${color.danger}; color: #fff; font-size: 10px; font-weight: 700; line-height: 16px; text-align: center; box-shadow: 0 0 0 2px ${color.ink}; }
+
+.forge-notif-bell { position: fixed; top: 16px; right: 28px; z-index: 60; width: 38px; height: 38px; border-radius: 50%; background: ${color.surface}; border: 1px solid ${color.border}; color: ${color.ink}; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 14px rgba(20,20,30,.10); transition: background .15s ease, transform .15s ease; }
+.forge-notif-bell:hover { background: ${color.borderSoft}; transform: translateY(-1px); }
+.forge-notif-banner-stack { position: fixed; top: 0; left: 64px; right: 86px; z-index: 55; display: flex; flex-direction: column; }
+.forge-notif-panel { position: fixed; top: 58px; right: 24px; z-index: 70; }
+
+@media (max-width: 900px) {
+  .forge-notif-bell { top: 68px; right: 12px; width: 34px; height: 34px; }
+  .forge-notif-banner-stack { left: 0; top: 58px; right: 54px; }
+  .forge-notif-panel { top: 108px; right: 12px; }
+}
 .forge-rail-spacer { flex: 1; }
 .forge-rail-divider { width: 26px; height: 1px; background: ${color.sidebarLine}; margin: 6px 0; }
 .forge-rail-label { display: none; }

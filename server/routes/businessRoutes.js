@@ -6,6 +6,8 @@ const requireSeatCompliance = require('../middleware/requireSeatCompliance');
 const requireRole = require('../middleware/requireRole');
 const { upload, uploadLauncherMedia } = require('../middleware/upload');
 const {
+  getNotifications,
+  dismissNotification,
   getProfile,
   updateProfile,
   uploadLogo,
@@ -28,6 +30,8 @@ const {
 
 router.get('/me', auth, getProfile);
 router.get('/team', auth, getTeam);
+router.get('/notifications', auth, getNotifications);
+router.post('/notifications/:id/dismiss', auth, dismissNotification);
 
 router.put('/me', auth, requireVerified, requireSeatCompliance, requireRole('owner', 'admin'), updateProfile);
 router.post('/logo', auth, requireVerified, requireSeatCompliance, requireRole('owner', 'admin'), upload.single('logo'), uploadLogo);

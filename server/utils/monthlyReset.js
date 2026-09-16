@@ -18,9 +18,10 @@ async function resetIfNewMonth(business) {
     business.spendResetAt = now;
     business.spendWarningSent = false;
     business.monthlySpendCap = cap;
+    business.dismissedNotifications = [];
     await Business.updateOne(
       { _id: business._id },
-      { monthlySpendUsed: 0, monthlyConversationsUsed: 0, spendResetAt: now, spendWarningSent: false, monthlySpendCap: cap }
+      { monthlySpendUsed: 0, monthlyConversationsUsed: 0, spendResetAt: now, spendWarningSent: false, monthlySpendCap: cap, dismissedNotifications: [] }
     );
   }
 }

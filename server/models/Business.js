@@ -134,6 +134,7 @@ const businessSchema = new mongoose.Schema({
   spendWarningSent: { type: Boolean, default: false },
   monthlyConversationsUsed: { type: Number, default: 0 },
   spendResetAt: { type: Date, default: Date.now },
+  dismissedNotifications: { type: [String], default: [] },
 
   stripeSubscriptionId: { type: String, default: null },
   planStatus: { type: String, default: "trialing" },

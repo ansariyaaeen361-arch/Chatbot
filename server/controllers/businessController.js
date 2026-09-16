@@ -1,9 +1,33 @@
 const Business = require('../models/Business');
 const scrapeWebsite = require('../utils/websiteScraper');
 const { getPlanConfig, hasFeature } = require('../utils/planConfig');
+const { getBusinessNotifications } = require('../utils/notifications');
 
 const MAX_KNOWLEDGE_ENTRIES = 15;
 const MAX_ENTRY_LENGTH = 6000;
+
+exports.getNotifications = async (req, res) => {
+  try {
+    const business = await Business.findById(req.user.businessId)
+      .select('plan monthlySpendUsed monthlySpendCap monthlyConversationsUsed dismissedNotifications');
+    if (!business) return res.status(404).json({ error: 'Business not found' });
+    res.json(getBusinessNotifications(business));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
+  }
+};
+
+exports.dismissNotification = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await Business.updateOne({ _id: req.user.businessId }, { $addToSet: { dismissedNotifications: id } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
+  }
+};
 
 exports.getProfile = async (req, res) => {
   try {

@@ -5,6 +5,7 @@ import { useLiveChatNotify } from "../context/LiveChatNotifyContext";
 import api from "../api/axios";
 import { color } from "../theme";
 import ConfirmDialog from "./ConfirmDialog";
+import NotificationCenter from "./NotificationCenter";
 
 const API_ORIGIN = (api.defaults.baseURL || "").replace(/\/api\/?$/, "");
 
@@ -57,6 +58,8 @@ export default function Sidebar({ setupSections, activeSection, onSectionClick }
 
   return (
     <aside className="forge-sidebar">
+      <NotificationCenter />
+
       {/* Desktop icon rail */}
       <nav className="forge-rail">
         <Link to="/home" className="forge-rail-brand" style={{ background: business?.brandColor || color.accent }} title={business?.name || "Home"}>
