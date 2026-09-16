@@ -188,11 +188,7 @@ export default function Billing() {
           })}
         </div>
 
-        {status.plan !== "trial" && status.planStatus === "active" && (
-          <button style={s.cancelLink} onClick={cancelPlan}>Cancel subscription</button>
-        )}
-
-        <div className="forge-card" style={s.promoCard}>
+        <div style={s.promoCard}>
           <div style={s.promoLabel}>Have a promo code?</div>
           <form style={s.promoRow} onSubmit={redeemPromo}>
             <input
@@ -210,7 +206,7 @@ export default function Billing() {
           {promoError && <div style={s.promoErrorText}>{promoError}</div>}
         </div>
 
-        <div className="forge-card" style={s.usageCard}>
+        <div style={s.usageCard}>
           <div style={s.usageLabel}>AI usage this month</div>
           <div style={s.usageBarTrack}>
             <div style={{ ...s.usageBarFill, width: `${usagePct}%` }} />
@@ -264,7 +260,6 @@ const s = {
   primaryBtnPopular: { width: "100%", background: color.accent, color: "#fff", border: "none", padding: "12px", borderRadius: 100, fontWeight: 600, fontSize: 13.5, cursor: "pointer" },
   currentBtn: { width: "100%", background: color.borderSoft, color: color.inkSoft, border: "none", padding: "12px", borderRadius: 100, fontWeight: 600, fontSize: 13.5 },
   downgradeBtn: { width: "100%", background: "none", color: color.inkSoft, border: `1px solid ${color.border}`, padding: "12px", borderRadius: 100, fontWeight: 600, fontSize: 13.5, cursor: "pointer", boxSizing: "border-box" },
-  cancelLink: { background: "none", border: "none", color: color.danger, fontSize: 12.5, textDecoration: "underline", cursor: "pointer", marginBottom: 24 },
 
   promoCard: { padding: 20, marginBottom: 16 },
   promoLabel: { fontSize: 12.5, fontWeight: 600, color: color.inkSoft, marginBottom: 10 },
