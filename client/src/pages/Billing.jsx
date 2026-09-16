@@ -25,6 +25,10 @@ export default function Billing() {
   const [loadingPlan, setLoadingPlan] = useState(null);
   const [msg, setMsg] = useState("");
   const [billingCycle, setBillingCycle] = useState("monthly");
+  const [promoCode, setPromoCode] = useState("");
+  const [promoMsg, setPromoMsg] = useState("");
+  const [promoError, setPromoError] = useState("");
+  const [redeeming, setRedeeming] = useState(false);
 
   useEffect(() => {
     loadStatus();
@@ -52,6 +56,24 @@ export default function Billing() {
     } catch (err) {
       setMsg(err.response?.data?.error || "Could not start checkout");
       setLoadingPlan(null);
+    }
+  }
+
+  async function redeemPromo(e) {
+    e.preventDefault();
+    if (!promoCode.trim()) return;
+    setRedeeming(true);
+    setPromoMsg("");
+    setPromoError("");
+    try {
+      const res = await api.post("/billing/redeem-promo", { code: promoCode.trim() });
+      setPromoMsg(`Promo applied — you're now on the ${res.data.plan} plan.`);
+      setPromoCode("");
+      loadStatus();
+    } catch (err) {
+      setPromoError(err.response?.data?.error || "Could not apply that promo code");
+    } finally {
+      setRedeeming(false);
     }
   }
 
@@ -170,6 +192,24 @@ export default function Billing() {
           <button style={s.cancelLink} onClick={cancelPlan}>Cancel subscription</button>
         )}
 
+        <div className="forge-card" style={s.promoCard}>
+          <div style={s.promoLabel}>Have a promo code?</div>
+          <form style={s.promoRow} onSubmit={redeemPromo}>
+            <input
+              className="forge-input"
+              style={s.promoInput}
+              placeholder="Enter code"
+              value={promoCode}
+              onChange={(e) => setPromoCode(e.target.value)}
+            />
+            <button className="forge-btn-primary" style={s.promoBtn} type="submit" disabled={redeeming || !promoCode.trim()}>
+              {redeeming ? "Applying…" : "Apply"}
+            </button>
+          </form>
+          {promoMsg && <div style={s.promoSuccess}>{promoMsg}</div>}
+          {promoError && <div style={s.promoErrorText}>{promoError}</div>}
+        </div>
+
         <div className="forge-card" style={s.usageCard}>
           <div style={s.usageLabel}>AI usage this month</div>
           <div style={s.usageBarTrack}>
@@ -225,6 +265,14 @@ const s = {
   currentBtn: { width: "100%", background: color.borderSoft, color: color.inkSoft, border: "none", padding: "12px", borderRadius: 100, fontWeight: 600, fontSize: 13.5 },
   downgradeBtn: { width: "100%", background: "none", color: color.inkSoft, border: `1px solid ${color.border}`, padding: "12px", borderRadius: 100, fontWeight: 600, fontSize: 13.5, cursor: "pointer", boxSizing: "border-box" },
   cancelLink: { background: "none", border: "none", color: color.danger, fontSize: 12.5, textDecoration: "underline", cursor: "pointer", marginBottom: 24 },
+
+  promoCard: { padding: 20, marginBottom: 16 },
+  promoLabel: { fontSize: 12.5, fontWeight: 600, color: color.inkSoft, marginBottom: 10 },
+  promoRow: { display: "flex", gap: 10 },
+  promoInput: { flex: 1, maxWidth: 260, boxSizing: "border-box", padding: "10px 14px", border: `1px solid ${color.border}`, borderRadius: 100, fontSize: 13.5, fontFamily: "inherit", background: "#FBFBFD" },
+  promoBtn: { background: color.ink, color: "#fff", border: "none", padding: "10px 22px", borderRadius: 100, fontWeight: 600, fontSize: 13.5, cursor: "pointer" },
+  promoSuccess: { fontSize: 12.5, color: color.successText, fontWeight: 600, marginTop: 10 },
+  promoErrorText: { fontSize: 12.5, color: color.danger, fontWeight: 600, marginTop: 10 },
 
   usageCard: { padding: 22 },
   usageLabel: { fontSize: 12.5, fontWeight: 600, color: color.inkSoft, marginBottom: 10 },
