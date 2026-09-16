@@ -7,11 +7,11 @@ import { color, layout, globalStyles } from "../theme";
 
 const PLANS = [
   { id: "starter", name: "Starter", monthlyPrice: 25, yearlyPrice: 250, popular: false,
-    features: ["FAQ + AI chat widget", "Knowledge base", "Full branding customization", "Lead capture", "Up to $20/mo AI usage", "1 team member"] },
+    features: ["FAQ + AI chat widget", "Knowledge base", "Full branding customization", "Lead capture", "Up to $10/mo AI usage", "1 team member"] },
   { id: "basic", name: "Growth", monthlyPrice: 60, yearlyPrice: 650, popular: true,
-    features: ["Everything in Starter", "Live agent handoff", "Analytics dashboard", "Team management + transfer", "Up to $20/mo AI usage", "5 team members"] },
+    features: ["Everything in Starter", "Live agent handoff", "Analytics dashboard", "Team management + transfer", "Up to $25/mo AI usage", "5 team members"] },
   { id: "pro", name: "Pro", monthlyPrice: 199, yearlyPrice: 2000, popular: false,
-    features: ["Everything in Growth", "Up to $100/mo AI usage", "10 team members"] }
+    features: ["Everything in Growth", "Up to $80/mo AI usage", "10 team members"] }
 ];
 
 function yearlySavingsPct(p) {

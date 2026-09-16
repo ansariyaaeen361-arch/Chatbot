@@ -128,7 +128,7 @@ const businessSchema = new mongoose.Schema({
 
   monthlySpendCap: {
     type: Number,
-    default: 10,
+    default: 1,
   },
   monthlySpendUsed: { type: Number, default: 0 },
   spendWarningSent: { type: Boolean, default: false },
