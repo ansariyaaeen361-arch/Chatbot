@@ -31,11 +31,13 @@ export default function NotificationCenter() {
     api.get("/business/notifications").then((res) => setNotifications(res.data)).catch(() => {});
   }
 
+  // Dismissing only hides the top banner — the item stays in the bell dropdown
+  // (as "seen") until the underlying issue actually clears (next monthly reset).
   function dismiss(id) {
     setDismissingIds((prev) => new Set(prev).add(id));
     api.post(`/business/notifications/${id}/dismiss`).catch(() => {});
     setTimeout(() => {
-      setNotifications((prev) => prev.filter((n) => n.id !== id));
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, dismissed: true } : n)));
       setDismissingIds((prev) => {
         const next = new Set(prev);
         next.delete(id);
@@ -44,11 +46,13 @@ export default function NotificationCenter() {
     }, 180);
   }
 
+  const bannerNotifications = notifications.filter((n) => !n.dismissed);
+
   return (
     <>
-      {notifications.length > 0 && (
+      {bannerNotifications.length > 0 && (
         <div className="forge-notif-banner-stack">
-          {notifications.map((n) => (
+          {bannerNotifications.map((n) => (
             <div
               key={n.id}
               style={{
@@ -83,7 +87,7 @@ export default function NotificationCenter() {
         onClick={() => setOpen((v) => !v)}
       >
         <BellGlyph />
-        {notifications.length > 0 && <span style={s.bellBadge}>{notifications.length > 9 ? "9+" : notifications.length}</span>}
+        {bannerNotifications.length > 0 && <span style={s.bellBadge}>{bannerNotifications.length > 9 ? "9+" : bannerNotifications.length}</span>}
       </button>
 
       {open && (
@@ -94,15 +98,19 @@ export default function NotificationCenter() {
           ) : (
             <div style={s.panelList}>
               {notifications.map((n) => (
-                <div key={n.id} style={s.panelItem}>
+                <div key={n.id} style={{ ...s.panelItem, ...(n.dismissed ? s.panelItemSeen : {}) }}>
                   <div style={{ ...s.panelDot, background: n.level === "critical" ? color.danger : "#D97706" }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={s.panelItemTitle}>{n.title}</div>
                     <div style={s.panelItemMsg}>{n.message}</div>
                   </div>
-                  <button type="button" style={s.panelItemClose} onClick={() => dismiss(n.id)} aria-label="Dismiss">
-                    <CloseGlyph />
-                  </button>
+                  {n.dismissed ? (
+                    <span style={s.panelItemSeenTag}>Seen</span>
+                  ) : (
+                    <button type="button" style={s.panelItemClose} onClick={() => dismiss(n.id)} aria-label="Dismiss">
+                      <CloseGlyph />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -196,8 +204,10 @@ const s = {
   panelEmpty: { padding: "20px 16px", fontSize: 12.5, color: color.inkFaint, textAlign: "center" },
   panelList: { maxHeight: 320, overflowY: "auto" },
   panelItem: { display: "flex", gap: 10, padding: "12px 16px", borderBottom: "1px solid rgba(0,0,0,.05)", alignItems: "flex-start" },
+  panelItemSeen: { opacity: 0.6 },
   panelDot: { width: 8, height: 8, borderRadius: "50%", marginTop: 4, flex: "0 0 auto" },
   panelItemTitle: { fontSize: 12.5, fontWeight: 700, color: color.ink, marginBottom: 2 },
   panelItemMsg: { fontSize: 11.5, color: color.inkSoft, lineHeight: 1.4 },
   panelItemClose: { background: "none", border: "none", color: color.inkFaint, cursor: "pointer", flex: "0 0 auto", padding: 2 },
+  panelItemSeenTag: { fontSize: 10, fontWeight: 600, color: color.inkFaint, flex: "0 0 auto", textTransform: "uppercase", letterSpacing: "0.04em" },
 };

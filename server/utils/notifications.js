@@ -6,6 +6,11 @@ const WARNING_THRESHOLD = 0.8;
 // conversations), each pair getting its own id at 80% ("warning") and 100%
 // ("full") so dismissing the warning doesn't also silence the later, more
 // urgent "full" notification — they're treated as distinct alerts.
+//
+// Dismissing only hides the top banner — the notification itself stays in the
+// bell dropdown (marked `dismissed: true`) so the business can still review it
+// later, and only disappears once the underlying condition actually clears
+// (e.g. the monthly reset, which also clears dismissedNotifications).
 function getBusinessNotifications(business) {
   const notifications = [];
   const dismissed = business.dismissedNotifications || [];
@@ -46,7 +51,7 @@ function getBusinessNotifications(business) {
     });
   }
 
-  return notifications.filter((n) => !dismissed.includes(n.id));
+  return notifications.map((n) => ({ ...n, dismissed: dismissed.includes(n.id) }));
 }
 
 module.exports = { getBusinessNotifications };
