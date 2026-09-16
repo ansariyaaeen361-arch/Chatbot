@@ -13,7 +13,7 @@ const PLANS = [
   { id: "basic", name: "Growth", monthlyPrice: 60, yearlyPrice: 650, popular: true,
     features: ["Everything in Starter", "Live agent handoff", "Analytics dashboard", "Team management + transfer", "Up to $25/mo AI usage", "5 team members"] },
   { id: "pro", name: "Pro", monthlyPrice: 199, yearlyPrice: 2000, popular: false,
-    features: ["Everything in Growth", "Up to $80/mo AI usage", "10 team members"] }
+    features: ["Everything in Growth", "Up to $80/mo AI usage", "10,000 conversations/mo", "10 team members", "Priority support", "Dedicated onboarding"] }
 ];
 
 function yearlySavingsPct(p) {
@@ -150,7 +150,7 @@ export default function Billing() {
                 {isCurrent ? (
                   <button style={s.currentBtn} disabled>Current plan</button>
                 ) : p.free ? (
-                  <button style={s.downgradeBtn} onClick={cancelPlan}>Downgrade to Free</button>
+                  <button style={s.downgradeBtn} onClick={cancelPlan}>Free</button>
                 ) : (
                   <button
                     className="forge-btn-primary"
