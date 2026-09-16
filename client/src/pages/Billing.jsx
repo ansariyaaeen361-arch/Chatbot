@@ -6,6 +6,8 @@ import BackToDashboard from "../components/BackToDashboard";
 import { color, layout, globalStyles } from "../theme";
 
 const PLANS = [
+  { id: "trial", name: "Free", monthlyPrice: 0, yearlyPrice: 0, popular: false, free: true,
+    features: ["FAQ + AI chat widget", "Up to $1/mo AI usage", "500 conversations/mo", "1 team member"] },
   { id: "starter", name: "Starter", monthlyPrice: 25, yearlyPrice: 250, popular: false,
     features: ["FAQ + AI chat widget", "Knowledge base", "Full branding customization", "Lead capture", "Up to $10/mo AI usage", "1 team member"] },
   { id: "basic", name: "Growth", monthlyPrice: 60, yearlyPrice: 650, popular: true,
@@ -120,20 +122,21 @@ export default function Billing() {
 
         <div style={s.plansGrid}>
           {PLANS.map((p) => {
-            const isCurrent = status.plan === p.id && status.planStatus === "active";
+            const isCurrent = status.plan === p.id && (p.free || status.planStatus === "active");
             const price = billingCycle === "yearly" ? p.yearlyPrice : p.monthlyPrice;
-            const period = billingCycle === "yearly" ? "/year" : "/month";
+            const period = p.free ? "" : billingCycle === "yearly" ? "/year" : "/month";
             return (
               <div
                 key={p.id}
                 id={`plan-${p.id}`}
                 className="forge-card"
-                style={{ ...s.planCard, ...(p.popular ? s.planCardPopular : {}) }}
+                style={{ ...s.planCard, ...(p.popular ? s.planCardPopular : {}), ...(isCurrent ? s.planCardCurrent : {}) }}
               >
                 {p.popular && <div style={s.popularBadge}>Most popular</div>}
+                {isCurrent && <div style={s.activeBadge}>Active</div>}
                 <div style={s.planName}>{p.name}</div>
                 <div style={s.planPrice}>${price}<span style={s.planPeriod}>{period}</span></div>
-                {billingCycle === "yearly" && (
+                {!p.free && billingCycle === "yearly" && (
                   <div style={s.savingsText}>Save {yearlySavingsPct(p)}% vs monthly</div>
                 )}
                 <ul style={s.featureList}>
@@ -143,8 +146,11 @@ export default function Billing() {
                     </li>
                   ))}
                 </ul>
+                <div style={s.planCardSpacer} />
                 {isCurrent ? (
                   <button style={s.currentBtn} disabled>Current plan</button>
+                ) : p.free ? (
+                  <button style={s.downgradeBtn} onClick={cancelPlan}>Downgrade to Free</button>
                 ) : (
                   <button
                     className="forge-btn-primary"
@@ -160,7 +166,7 @@ export default function Billing() {
           })}
         </div>
 
-        {status.planStatus === "active" && (
+        {status.plan !== "trial" && status.planStatus === "active" && (
           <button style={s.cancelLink} onClick={cancelPlan}>Cancel subscription</button>
         )}
 
@@ -194,10 +200,13 @@ const s = {
   statusInactive: { background: color.borderSoft, color: color.inkSoft },
   toast: { background: color.successSoft, color: color.successText, padding: "10px 14px", borderRadius: 9, fontSize: 12.5, marginBottom: 18, fontWeight: 600 },
 
-  plansGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 18, marginBottom: 16, marginTop: 20 },
-  planCard: { position: "relative", background: color.surface, border: `1px solid ${color.border}`, borderRadius: 16, padding: "26px 24px 24px" },
+  plansGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 18, marginBottom: 16, marginTop: 20, alignItems: "stretch" },
+  planCard: { position: "relative", background: color.surface, border: `1px solid ${color.border}`, borderRadius: 16, padding: "26px 24px 24px", display: "flex", flexDirection: "column", height: "100%", boxSizing: "border-box" },
   planCardPopular: { border: `2px solid ${color.accent}`, boxShadow: "0 8px 24px rgba(91,91,214,.12)" },
+  planCardCurrent: { border: `2px solid ${color.successText}`, boxShadow: "0 8px 24px rgba(30,150,90,.10)" },
+  planCardSpacer: { flex: "1 1 auto" },
   popularBadge: { position: "absolute", top: -12, left: 24, background: color.accent, color: "#fff", fontSize: 10.5, fontWeight: 700, padding: "4px 12px", borderRadius: 999, letterSpacing: "0.03em" },
+  activeBadge: { position: "absolute", top: -12, right: 24, background: color.successText, color: "#fff", fontSize: 10.5, fontWeight: 700, padding: "4px 12px", borderRadius: 999, letterSpacing: "0.03em" },
   planName: { fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: color.inkSoft },
   planPrice: { fontSize: 32, fontWeight: 700, margin: "8px 0 18px", fontFamily: "'Space Grotesk', sans-serif", color: color.ink },
   planPeriod: { fontSize: 13, fontWeight: 400, color: color.inkSoft },
@@ -214,6 +223,7 @@ const s = {
   primaryBtn: { width: "100%", background: color.ink, color: "#fff", border: "none", padding: "12px", borderRadius: 100, fontWeight: 600, fontSize: 13.5, cursor: "pointer" },
   primaryBtnPopular: { width: "100%", background: color.accent, color: "#fff", border: "none", padding: "12px", borderRadius: 100, fontWeight: 600, fontSize: 13.5, cursor: "pointer" },
   currentBtn: { width: "100%", background: color.borderSoft, color: color.inkSoft, border: "none", padding: "12px", borderRadius: 100, fontWeight: 600, fontSize: 13.5 },
+  downgradeBtn: { width: "100%", background: "none", color: color.inkSoft, border: `1px solid ${color.border}`, padding: "12px", borderRadius: 100, fontWeight: 600, fontSize: 13.5, cursor: "pointer", boxSizing: "border-box" },
   cancelLink: { background: "none", border: "none", color: color.danger, fontSize: 12.5, textDecoration: "underline", cursor: "pointer", marginBottom: 24 },
 
   usageCard: { padding: 22 },
