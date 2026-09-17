@@ -9,9 +9,9 @@ const PLANS = [
   { id: "trial", name: "Free", monthlyPrice: 0, yearlyPrice: 0, popular: false, free: true,
     features: ["FAQ + AI chat widget", "Up to $1/mo AI usage", "500 conversations/mo", "1 team member"] },
   { id: "starter", name: "Starter", monthlyPrice: 25, yearlyPrice: 250, popular: false,
-    features: ["FAQ + AI chat widget", "Knowledge base", "Full branding customization", "Lead capture", "Up to $10/mo AI usage", "1 team member"] },
+    features: ["FAQ + AI chat widget", "Live agent handoff", "Knowledge base", "Full branding customization", "Lead capture", "Up to $10/mo AI usage", "1 team member"] },
   { id: "basic", name: "Growth", monthlyPrice: 60, yearlyPrice: 650, popular: true,
-    features: ["Everything in Starter", "Live agent handoff", "Analytics dashboard", "Team management + transfer", "Up to $25/mo AI usage", "5 team members"] },
+    features: ["Everything in Starter", "Analytics dashboard", "Team management + transfer", "Up to $25/mo AI usage", "5 team members"] },
   { id: "pro", name: "Pro", monthlyPrice: 199, yearlyPrice: 2000, popular: false,
     features: ["Everything in Growth", "Up to $80/mo AI usage", "10,000 conversations/mo", "10 team members", "Priority support", "Dedicated onboarding"] }
 ];
