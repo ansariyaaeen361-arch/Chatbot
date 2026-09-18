@@ -49,9 +49,10 @@ function playLoudAlert() {
 }
 
 // A ringing-phone style repeating tone for a visitor waiting for a live agent —
-// louder and kept ringing until the request is accepted (or the visitor leaves).
+// sharp/urgent (square wave, near-max gain) so it actually cuts through, and
+// kept ringing until the request is accepted (or the visitor leaves).
 function playWaitingRing() {
-  playTones([700, 900], { type: "sine", gap: 0.15, dur: 0.15, peak: 0.45 });
+  playTones([1050, 1050, 1350, 1350], { type: "square", gap: 0.13, dur: 0.12, peak: 0.75 });
 }
 
 // Mounted once for the whole logged-in app (not just the Inbox/LiveChat page) so an

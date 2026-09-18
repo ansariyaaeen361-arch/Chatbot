@@ -1,12 +1,17 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { io } from "socket.io-client";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import Sidebar from "../components/Sidebar";
 import BackToDashboard from "../components/BackToDashboard";
+import { useAuth } from "../context/AuthContext";
 import api from "../api/axios";
 import { color, layout, globalStyles } from "../theme";
 
+const API_ROOT = (api.defaults.baseURL || "").replace(/\/api\/?$/, "");
+
 export default function Analytics() {
+  const { businessId } = useAuth();
   const [overview, setOverview] = useState(null);
   const [messageTrend, setMessageTrend] = useState(null);
   const [topQuestions, setTopQuestions] = useState([]);
@@ -22,7 +27,7 @@ export default function Analytics() {
   const [leadConversations, setLeadConversations] = useState({});
   const [loadingConversation, setLoadingConversation] = useState(null);
 
-  useEffect(() => {
+  function loadAll() {
     api.get("/analytics/overview").then((res) => setOverview(res.data)).catch((err) => {
       if (err.response?.status === 403) setBlocked(true);
     });
@@ -31,7 +36,20 @@ export default function Analytics() {
     api.get("/analytics/leads").then((res) => setLeads(res.data)).catch(() => {});
     api.get("/analytics/missed-faqs").then((res) => setMissedFaqs(res.data)).catch(() => {});
     api.get("/analytics/agent-stats").then((res) => setAgentStats(res.data)).catch(() => {});
+  }
+
+  useEffect(() => {
+    loadAll();
   }, []);
+
+  // Live-update the moment a new lead, message, or chat comes in — no reload needed.
+  useEffect(() => {
+    if (!businessId) return;
+    const socket = io(API_ROOT);
+    socket.emit("join_business", businessId);
+    socket.on("refresh", loadAll);
+    return () => socket.disconnect();
+  }, [businessId]);
 
   const filteredLeads = useMemo(() => {
     const q = leadSearch.trim().toLowerCase();

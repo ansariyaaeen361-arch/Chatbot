@@ -583,9 +583,14 @@
   // ---------- lead capture ----------
   var pendingLivePurpose = false;
 
-  function submitLead(name, contact, onDone) {
-    var email = contact.indexOf('@') > -1 ? contact : '';
-    var phone = contact.indexOf('@') === -1 ? contact : '';
+  function isValidEmail(v) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
+  }
+  function isValidPhone(v) {
+    return /^[0-9+()\-\s]{6,20}$/.test(v) && /\d{5,}/.test(v.replace(/[^0-9]/g, ''));
+  }
+
+  function submitLead(name, email, phone, onDone) {
     fetch(API_BASE + "/public/lead/" + businessId, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: name, email: email, phone: phone, sessionId: state.sessionId })
@@ -595,6 +600,19 @@
       saveState();
       onDone();
     });
+  }
+
+  function validateLeadFields(card, errBox) {
+    var name = card.querySelector('#mf2Name').value.trim();
+    var email = card.querySelector('#mf2Email').value.trim();
+    var phone = card.querySelector('#mf2Phone').value.trim();
+    errBox.style.display = 'none';
+    if (!name) { errBox.textContent = 'Please enter your name.'; errBox.style.display = 'block'; return null; }
+    if (!email) { errBox.textContent = 'Please enter your email address.'; errBox.style.display = 'block'; return null; }
+    if (!isValidEmail(email)) { errBox.textContent = 'Please enter a valid email address.'; errBox.style.display = 'block'; return null; }
+    if (!phone) { errBox.textContent = 'Please enter your phone number.'; errBox.style.display = 'block'; return null; }
+    if (!isValidPhone(phone)) { errBox.textContent = 'Please enter a valid phone number.'; errBox.style.display = 'block'; return null; }
+    return { name: name, email: email, phone: phone };
   }
 
   function showLeadForm(purpose) {
@@ -607,19 +625,16 @@
         '<div style="font-weight:600;margin-bottom:6px;">Hi! Who am I speaking with?</div>' +
         '<div style="font-size:12px;color:#6E6A63;margin-bottom:8px;">So our team can follow up with you directly.</div>' +
         '<input type="text" id="mf2Name" placeholder="Your name" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false">' +
-        '<input type="text" id="mf2Contact" placeholder="Email or phone" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false">' +
+        '<input type="email" id="mf2Email" placeholder="Email address" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false">' +
+        '<input type="tel" id="mf2Phone" placeholder="Phone number" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false">' +
         '<div class="mf2-err" id="mf2Err" style="display:none;"></div>' +
         '<button id="mf2LeadBtn">Continue</button>';
       row.appendChild(card); body.appendChild(row); scrollDown();
 
       card.querySelector('#mf2LeadBtn').addEventListener('click', function () {
-        var name = card.querySelector('#mf2Name').value.trim();
-        var contact = card.querySelector('#mf2Contact').value.trim();
-        var errBox = card.querySelector('#mf2Err');
-        errBox.style.display = 'none';
-        if (!name) { errBox.textContent = 'Please enter your name.'; errBox.style.display = 'block'; return; }
-        if (!contact) { errBox.textContent = 'Please enter your email or phone.'; errBox.style.display = 'block'; return; }
-        submitLead(name, contact, function () {
+        var fields = validateLeadFields(card, card.querySelector('#mf2Err'));
+        if (!fields) return;
+        submitLead(fields.name, fields.email, fields.phone, function () {
           row.remove();
           actuallyStartLiveChat();
         });
@@ -637,18 +652,16 @@
         '<div class="mf2-gate-title">Hi! Who am I speaking with?</div>' +
         '<div class="mf2-gate-desc">Please share your details to start chatting with us.</div>' +
         '<input type="text" id="mf2Name" placeholder="Your name" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false">' +
-        '<input type="text" id="mf2Contact" placeholder="Email or phone" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false">' +
+        '<input type="email" id="mf2Email" placeholder="Email address" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false">' +
+        '<input type="tel" id="mf2Phone" placeholder="Phone number" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false">' +
         '<button id="mf2LeadBtn">Continue</button>' +
         '<div class="mf2-gate-err" id="mf2Err" style="display:none;"></div>' +
       '</div>';
 
     gate.querySelector('#mf2LeadBtn').addEventListener('click', function () {
-      var name = gate.querySelector('#mf2Name').value.trim();
-      var contact = gate.querySelector('#mf2Contact').value.trim();
-      var errBox = gate.querySelector('#mf2Err');
-      errBox.style.display = 'none';
-      if (!name) { errBox.textContent = 'Please enter your name.'; errBox.style.display = 'block'; return; }
-      submitLead(name, contact, function () {
+      var fields = validateLeadFields(gate, gate.querySelector('#mf2Err'));
+      if (!fields) return;
+      submitLead(fields.name, fields.email, fields.phone, function () {
         gate.style.display = 'none';
         gate.innerHTML = '';
         body.style.display = '';

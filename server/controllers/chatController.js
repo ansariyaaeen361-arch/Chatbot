@@ -72,6 +72,7 @@ exports.chat = async (req, res) => {
       if (result.length > 0 && result[0].score <= FAQ_MATCH_SCORE_CUTOFF) {
         await business.save();
         ChatLog.create({ businessId, sessionId, userMessage: userText, source: 'faq' }).catch(() => {});
+        req.app.get('io').to(`business_${businessId}`).emit('refresh');
         return res.json({ reply: result[0].item.answer, source: 'faq' });
       }
 
@@ -146,6 +147,7 @@ exports.chat = async (req, res) => {
       chatLogId = log._id;
     } catch {}
 
+    req.app.get('io').to(`business_${businessId}`).emit('refresh');
     res.json({ reply, source: 'ai', chatLogId });
   } catch (err) {
     console.error(err);

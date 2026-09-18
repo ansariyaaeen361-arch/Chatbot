@@ -11,20 +11,25 @@ function escapeHtml(str) {
 }
 
 async function notifyOwnerOfLead(businessId, lead) {
-  const [business, owner] = await Promise.all([
+  const [business, team] = await Promise.all([
     Business.findById(businessId).select('name'),
-    User.findOne({ businessId, role: 'owner' }).select('name email'),
+    User.find({ businessId }).select('name email'),
   ]);
-  if (!owner) return;
+  if (!team.length) return;
 
   const contactLines = [];
   if (lead.email) contactLines.push(`Email: ${escapeHtml(lead.email)}`);
   if (lead.phone) contactLines.push(`Phone: ${escapeHtml(lead.phone)}`);
 
-  await sendEmail({
-    to: owner.email,
-    subject: `New lead from ${business ? business.name : 'your chatbot'}`,
-    html: `<p>Hi ${escapeHtml(owner.name)},</p><p>You've got a new lead from your ${business ? escapeHtml(business.name) : ''} chatbot:</p><p><strong>Name:</strong> ${escapeHtml(lead.name)}<br>${contactLines.join('<br>')}</p>`
+  const results = await Promise.allSettled(team.map((member) =>
+    sendEmail({
+      to: member.email,
+      subject: `New lead from ${business ? business.name : 'your chatbot'}`,
+      html: `<p>Hi ${escapeHtml(member.name)},</p><p>You've got a new lead from your ${business ? escapeHtml(business.name) : ''} chatbot:</p><p><strong>Name:</strong> ${escapeHtml(lead.name)}<br>${contactLines.join('<br>')}</p>`
+    })
+  ));
+  results.forEach((r, i) => {
+    if (r.status === 'rejected') console.log('Lead notification email failed for', team[i].email, ':', r.reason?.message);
   });
 }
 
@@ -78,12 +83,20 @@ exports.createLead = async (req, res) => {
     const { businessId } = req.params;
     const { name, email, phone, sessionId } = req.body;
 
-    if (!name || (!email && !phone)) {
-      return res.status(400).json({ error: 'Name and email or phone required' });
+    if (!name || !email || !phone) {
+      return res.status(400).json({ error: 'Name, email, and phone are required' });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      return res.status(400).json({ error: 'A valid email address is required' });
+    }
+    if (!/\d{5,}/.test(String(phone).replace(/[^0-9]/g, ''))) {
+      return res.status(400).json({ error: 'A valid phone number is required' });
     }
 
     const lead = await Lead.create({ businessId, name, email, phone, sessionId: sessionId || '' });
     res.json({ success: true, leadId: lead._id });
+
+    req.app.get('io').to(`business_${businessId}`).emit('refresh');
 
     notifyOwnerOfLead(businessId, { name, email, phone }).catch((e) =>
       console.log('Lead notification email failed:', e.message)

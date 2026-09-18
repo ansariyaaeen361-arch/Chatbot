@@ -1,22 +1,41 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { io } from "socket.io-client";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/Sidebar";
 import api from "../api/axios";
 import { color, layout, globalStyles } from "../theme";
 
+const API_ROOT = (api.defaults.baseURL || "").replace(/\/api\/?$/, "");
+
 export default function Home() {
-  const { user } = useAuth();
+  const { user, businessId } = useAuth();
   const [summary, setSummary] = useState(null);
   const [business, setBusiness] = useState(null);
   const [trend, setTrend] = useState(null);
   const [trendRange, setTrendRange] = useState(7);
 
-  useEffect(() => {
+  function loadSummary() {
     api.get("/analytics/home").then((res) => setSummary(res.data)).catch(() => {});
+  }
+
+  useEffect(() => {
+    loadSummary();
     api.get("/business/me").then((res) => setBusiness(res.data)).catch(() => {});
   }, []);
+
+  // Live-update the moment a new lead, message, or chat comes in — no reload needed.
+  useEffect(() => {
+    if (!businessId) return;
+    const socket = io(API_ROOT);
+    socket.emit("join_business", businessId);
+    socket.on("refresh", () => {
+      loadSummary();
+      api.get(`/analytics/home-trend?days=${trendRange}`).then((res) => setTrend(res.data.points)).catch(() => {});
+    });
+    return () => socket.disconnect();
+  }, [businessId, trendRange]);
 
   useEffect(() => {
     setTrend(null);
