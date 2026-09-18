@@ -8,6 +8,10 @@ const transporter = nodemailer.createTransport({
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
+  // The VPS's IPv6 route to Gmail's SMTP is unreliable (intermittent
+  // ENETUNREACH), so force IPv4 for this connection rather than relying on
+  // Node's global DNS ordering, which doesn't always apply here.
+  family: 4,
   tls: {
     rejectUnauthorized: false
   }
